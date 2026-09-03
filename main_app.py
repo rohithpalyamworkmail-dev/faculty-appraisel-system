@@ -10,7 +10,7 @@ with st.sidebar:
 if menu=="Departments & Tables":
     add,delete=st.tabs(["Initialize Department","Delete Department Data"])
     with add:
-        col1,col2=st.columns([2,1],border=True,gap="small")
+        col1,col2=st.columns([1,2],border=True,gap="small")
         data_bases_and_tables(col1,col2).add()
     with delete:
         col1,col2=st.columns([2,1],border=True,gap="small")
@@ -82,14 +82,14 @@ elif menu=="Update Examination Results":
 elif menu=="Add Tables":
     add,edit,view,delete=st.tabs(["Add","Edit","View","Delete"])
     with add:
-        col1,col2=st.columns([2,1],border=True,gap="small")
+        col1,col2=st.columns([2.5,1],border=True,gap="small")
         addTables(col1,col2).add()
     with edit:
-        col1,col2=st.columns([2,1],border=True,gap="small")
+        col1,col2=st.columns([2.5,1],border=True,gap="small")
         addTables(col1,col2).edit()
     with view:
-        col1,col2=st.columns([2,1],border=True,gap="small")
+        col1,col2=st.columns([2.5,1],border=True,gap="small")
         addTables(col1,col2).view()
     with delete:
-        col1,col2=st.columns([2,1],border=True,gap="small")
+        col1,col2=st.columns([2.5,1],border=True,gap="small")
         addTables(col1,col2).delete()
