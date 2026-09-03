@@ -1,0 +1,7 @@
+streamlit
+streamlit-option-menu
+streamlit-extras
+supabase
+pandas
+plotly
+reportlab

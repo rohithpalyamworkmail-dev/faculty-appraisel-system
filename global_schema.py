@@ -1,0 +1,5 @@
+students="""student_name TEXT,student_age INTEGER,stuent_batch TEXT,student_regulation TEXT,student_adress TEXT,student_district TEXT,student_state TEXT,student_gender TEXT,student_roll_number TEXT PRIMARY KEY NOT NULL,student_mentor_id TEXT"""
+faculty="""faculty_name TEXT,faculty_department TEXT,faculty_id TEXT,faculty_salary INTEGER,faculty_overall_experience INTEGER,faculty_experience_mtiet INTEGER,faculty_password TEXT,faculty_permanent_district TEXT,faculty_permanent_state TEXT,faculty_current_district TEXT,faculty_current_state TEXT,is_controller TEXT,is_hod TEXT,is_principal TEXT,is_admin TEXT,designation TEXT,is_phd_holder TEXT"""
+subjects="""subject_name TEXT,subject_code TEXT,subject_semister INTEGER,subject_type TEXT,subject_credits INTEGER,alloted_faculty_ids TEXT,alloted_sections TEXT"""
+students_academic_details="""student_roll_numner TEXT,student_batch TEXT,student_department TEXT,regulation TEXT,status TEXT"""
+alumni="""student_roll_number TEXT,student_batch TEXT,student_department TEXT,student_regulation TEXT"""
