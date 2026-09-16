@@ -99,12 +99,12 @@ class studentSeminarWorkshopConference:
                     return
 
                 batches=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batch=st.pills("Select Batch",batches,selection_mode="single")
+                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True)
                 selected_students=st.multiselect("Select Students",self.getStudents(selected_batch)) if selected_batch else []
-                result=st.pills("Result",["Participation","Prize Winning"],selection_mode="single")
+                result=st.pills("Result",["Participation","Prize Winning"],selection_mode="single",wrap=True)
                 prize_position=st.selectbox("Prize Position",[1,2,3]) if result=="Prize Winning" else 0
-                participated_in=st.pills("Participated In",["seminar","workshop","symposium","conference"],selection_mode="single")
-                participation_type=st.pills("Participation Type",["National","International"],selection_mode="single")
+                participated_in=st.pills("Participated In",["seminar","workshop","symposium","conference"],selection_mode="single",wrap=True)
+                participation_type=st.pills("Participation Type",["National","International"],selection_mode="single",wrap=True)
                 team_name=st.text_input("Team Name")
                 proof_url=st.text_input("Proof URL")
 
