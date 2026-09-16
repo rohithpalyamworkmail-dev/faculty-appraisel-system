@@ -120,7 +120,7 @@ class projectGuidance:
                     return
 
                 batch_options=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batches=st.pills("Select Batches",batch_options,selection_mode="multi",wrap=True)
+                selected_batches=st.pills("Select Batches",batch_options,selection_mode="multi",wrap=True,width="stretch")
                 selected_students=st.multiselect("Select Student Roll Numbers",self.getStudents(selected_batches)) if selected_batches else []
                 project_title=st.text_input("Enter Project Title")
                 project_type=st.radio("What Type It Is",["Conference","Journal","Patent"],horizontal=True,index=None)
