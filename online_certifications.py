@@ -65,7 +65,7 @@ class onlineCertifications:
 
             with col1:
                 st.subheader("Online Certification")
-                certification_type=st.pills("Certification Type",["NPTEL","MNC","Other"],selection_mode="single")
+                certification_type=st.pills("Certification Type",["NPTEL","MNC","Other"],selection_mode="single",wrap=True)
                 company="IITs" if certification_type=="NPTEL" else ""
                 if certification_type in ["MNC","Other"]:company=st.text_input("Company")
                 description=st.text_area("Description")

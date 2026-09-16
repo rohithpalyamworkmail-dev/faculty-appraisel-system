@@ -75,10 +75,10 @@ class bookPublications:
             with col1:
                 st.subheader("Book Publication Entry")
                 book_name=st.text_input("Book Name")
-                book_category=st.pills("Book Category",["Group1","Group2","Other"],selection_mode="single")
+                book_category=st.pills("Book Category",["Group1","Group2","Other"],selection_mode="single",wrap=True)
                 publisher_name=st.text_input("Publisher Name")
                 published_year=st.number_input("Published Year",min_value=1900,step=1)
-                author_type=st.pills("Author Type",["Author","Co-Author"],selection_mode="single")
+                author_type=st.pills("Author Type",["Author","Co-Author"],selection_mode="single",wrap=True)
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
 

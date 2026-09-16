@@ -73,7 +73,7 @@ class guestLectures:
 
             with col1:
                 st.subheader("Guest Lecture Entry")
-                institute_type=st.pills("Institute Type",self.institute_types,selection_mode="single")
+                institute_type=st.pills("Institute Type",self.institute_types,selection_mode="single",wrap=True)
                 institution_name=st.text_input("Institution Name")
                 number_of_days=st.number_input("Number Of Days",min_value=1,step=1)
                 topics_covered=st.text_area("Topics Covered")

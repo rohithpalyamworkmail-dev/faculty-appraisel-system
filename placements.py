@@ -92,7 +92,7 @@ class placements:
                     return
 
                 batches=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batch=st.pills("Select Batch",batches,selection_mode="single")
+                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True)
                 selected_students=st.multiselect("Select Students",self.getStudents(selected_batch)) if selected_batch else []
                 company=st.text_input("Company")
                 package=st.number_input("Package (LPA)",min_value=0.0,step=0.1)

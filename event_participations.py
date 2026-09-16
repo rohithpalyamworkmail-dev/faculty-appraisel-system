@@ -73,7 +73,7 @@ class eventParticipations:
             with col1:
                 st.subheader("Event Participation Entry")
                 event_name=st.text_input("Event Name")
-                event_type=st.pills("Event Type",self.event_types,selection_mode="single")
+                event_type=st.pills("Event Type",self.event_types,selection_mode="single",wrap=True)
                 number_of_days=st.number_input("Number Of Days",min_value=1,step=1)
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")

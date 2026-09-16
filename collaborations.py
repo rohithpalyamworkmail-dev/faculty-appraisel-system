@@ -83,10 +83,10 @@ class collaborations:
 
             with col1:
                 st.subheader("Industry / Institute Collaboration")
-                colloboration_type=st.pills("Collaboration Type",self.colloboration_types,selection_mode="single")
+                colloboration_type=st.pills("Collaboration Type",self.colloboration_types,selection_mode="single",wrap=True)
                 st.write("CoE Stands For 'Center Of Excellence'")
                 colloboration_name=st.text_input("Collaboration Name")
-                colloboration_with=st.pills("Collaboration With",self.colloboration_with_types,selection_mode="single")
+                colloboration_with=st.pills("Collaboration With",self.colloboration_with_types,selection_mode="single",wrap=True)
                 organization_name=st.text_input("Organization Name")
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")

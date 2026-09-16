@@ -95,16 +95,16 @@ class phdGuidance:
 
             with col1:
                 st.subheader("Ph.D Guidance Entry")
-                research_type=st.pills("Research Type",self.research_types,selection_mode="single",width="stretch")
+                research_type=st.pills("Research Type",self.research_types,selection_mode="single",width="stretch",wrap=True)
                 external=False;internal_full_time=False;part_time=False;full_time=False
 
                 if research_type=="Scholar Registration":
-                    registration_type=st.pills("Scholar Registration Type",["External","Internal & Full Time"],selection_mode="single")
+                    registration_type=st.pills("Scholar Registration Type",["External","Internal & Full Time"],selection_mode="single",wrap=True)
                     external=registration_type=="External"
                     internal_full_time=registration_type=="Internal & Full Time"
 
                 if research_type=="Scholar Completion":
-                    completion_type=st.pills("Scholar Completion Type",["Part Time","Full Time"],selection_mode="single")
+                    completion_type=st.pills("Scholar Completion Type",["Part Time","Full Time"],selection_mode="single",wrap=True)
                     part_time=completion_type=="Part Time"
                     full_time=completion_type=="Full Time"
 

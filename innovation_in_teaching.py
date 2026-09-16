@@ -75,7 +75,7 @@ class innovationInTeaching:
                 if subjects_df.empty:
                     st.warning("No subjects are assigned to this faculty.")
                 else:
-                    subject_type=st.pills("Select Subject Type",subjects_df["subject_type"].dropna().unique().tolist(),selection_mode="single")
+                    subject_type=st.pills("Select Subject Type",subjects_df["subject_type"].dropna().unique().tolist(),selection_mode="single",wrap=True)
                     problems_faced=st.text_area("Problems Faced")
                     innovation=st.text_area("Innovation")
                     proof_url=st.text_input("Proof URL")

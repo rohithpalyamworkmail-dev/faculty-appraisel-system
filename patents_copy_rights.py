@@ -71,9 +71,9 @@ class patentCopyRights:
 
             with col1:
                 st.subheader("Patent / Copyright Entry")
-                patent_type=st.pills("Patent Type",["Patent","Copy Right","Design Patent"],selection_mode="single")
+                patent_type=st.pills("Patent Type",["Patent","Copy Right","Design Patent"],selection_mode="single",wrap=True)
                 patent_name=st.text_input("Patent / Copyright Name")
-                patent_status=st.pills("Patent Status",["Patent Published","Copy Right Granted","Patent Granted With Institution Name","Patent Granted Without Institution Name","Design Patent Granted With Institution Name","Design Patent Granted Without Institution Name","Revenue Generated From Patent","Revenue Generated From Design Patent"],selection_mode="single")
+                patent_status=st.pills("Patent Status",["Patent Published","Copy Right Granted","Patent Granted With Institution Name","Patent Granted Without Institution Name","Design Patent Granted With Institution Name","Design Patent Granted Without Institution Name","Revenue Generated From Patent","Revenue Generated From Design Patent"],selection_mode="single",wrap=True)
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
 

@@ -71,7 +71,7 @@ class organizingInternationalConference:
             with col1:
                 st.subheader("Organizing International Conference")
                 conference_name=st.text_input("Conference Name")
-                partner=st.pills("Partner",self.entry_partners,selection_mode="single")
+                partner=st.pills("Partner",self.entry_partners,selection_mode="single",wrap=True)
                 scopused_in_index=st.checkbox("Scopus Indexed")
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")

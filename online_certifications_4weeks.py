@@ -69,7 +69,7 @@ class onlineCertifications4Weeks:
 
             with col1:
                 st.subheader("Online Certification - Minimum 4 Weeks")
-                certificate_type=st.pills("Certificate Type",self.certificate_types,selection_mode="single")
+                certificate_type=st.pills("Certificate Type",self.certificate_types,selection_mode="single",wrap=True)
                 certificate_name=st.text_input("Certificate Name")
                 duration=st.number_input("Duration (Weeks)",min_value=4,step=1)
                 proof_url=st.text_input("Proof URL")

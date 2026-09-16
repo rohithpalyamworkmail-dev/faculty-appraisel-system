@@ -25,7 +25,7 @@ class data_bases_and_tables:
         operation=self.col1.radio("Select Operation To Perform",["Add DB","Add Tables"],key="operation")
 
         if operation=="Add DB":
-            database=self.col2.pills("Select Department",department,key="create_db")
+            database=self.col2.pills("Select Department",department,key="create_db",wrap=True)
             confirm=self.col2.toggle("Confirm To Create Department",key="confirm_create")
 
             if confirm:
@@ -34,7 +34,7 @@ class data_bases_and_tables:
                 else:self.col2.error(f"Unable To Initialize {database}")
 
         else:
-            database=self.col2.pills("Select Department",department,key="connect_db")
+            database=self.col2.pills("Select Department",department,key="connect_db",wrap=True)
             confirm=self.col2.toggle("Confirm Core Tables",key="confirm_connect")
 
             if confirm:
@@ -48,7 +48,7 @@ class data_bases_and_tables:
                     else:self.col2.error(f"{table_name}: {message}")
 
     def delete(self):
-        database=self.col1.pills("Select Department To Remove Permanently",department,key="delete_db",width="stretch")
+        database=self.col1.pills("Select Department To Remove Permanently",department,key="delete_db",width="stretch",wrap=True)
         confirm=self.col1.toggle("Confirm To Delete",key="confirm_delete")
 
         if confirm:
@@ -61,7 +61,7 @@ class subjects:
         self.col1,self.col2=col1,col2
 
     def add(self):
-        database=self.col1.pills("Select Department To Add Subjects",department,key="add_subjects_db",width="stretch")
+        database=self.col1.pills("Select Department To Add Subjects",department,key="add_subjects_db",width="stretch",wrap=True)
         file=self.col1.file_uploader("Upload Subjects Data",type=["csv"],key="subjects_file")
         confirm=self.col1.toggle(f"Confirm To Add The Uploaded File - {file.name if file else ''}",key="confirm_add_subjects")
 
@@ -80,7 +80,7 @@ class subjects:
             else:self.col2.warning("Unable To Add Subjects")
 
     def edit(self):
-        database=self.col1.pills("Select Department To Edit Subjects",department,key="edit_subjects_db",width="stretch")
+        database=self.col1.pills("Select Department To Edit Subjects",department,key="edit_subjects_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select A Department");return
 
         try:df=_dataframe(database,"subjects")
@@ -100,7 +100,7 @@ class faculty:
         self.col1,self.col2=col1,col2
 
     def add(self):
-        database=self.col1.pills("Select Department To Add Faculty",department,key="add_faculty_db",width="stretch")
+        database=self.col1.pills("Select Department To Add Faculty",department,key="add_faculty_db",width="stretch",wrap=True)
         file=self.col1.file_uploader("Upload Faculty Data",type=["csv"],key="faculty_file")
         confirm=self.col1.toggle(f"Confirm To Add The Uploaded File - {file.name if file else ''}",key="confirm_add_faculty")
 
@@ -119,7 +119,7 @@ class faculty:
             else:self.col2.warning("Unable To Add Faculty")
 
     def edit(self):
-        database=self.col1.pills("Select Department To Edit Faculty",department,key="edit_faculty_db",width="stretch")
+        database=self.col1.pills("Select Department To Edit Faculty",department,key="edit_faculty_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select A Department");return
 
         try:df=_dataframe(database,"faculty")
@@ -139,7 +139,7 @@ class students:
         self.col1,self.col2=col1,col2
 
     def add(self):
-        database=self.col1.pills("Select Department To Add Students",department,key="add_students_db")
+        database=self.col1.pills("Select Department To Add Students",department,key="add_students_db",wrap=True)
         file=self.col1.file_uploader("Upload Students Data",type=["csv"],key="students_file")
         confirm=self.col1.toggle(f"Confirm To Add The Uploaded File - {file.name if file else ''}",key="confirm_add_students")
 
@@ -158,8 +158,8 @@ class students:
             else:self.col2.warning("Unable To Add Students")
 
     def edit(self):
-        database=self.col1.pills("Select Department To Edit Students",department,key="edit_students_db")
-        batch=self.col1.pills("Select Batch",batches,key="edit_students_batch",width="stretch")
+        database=self.col1.pills("Select Department To Edit Students",department,key="edit_students_db",wrap=True)
+        batch=self.col1.pills("Select Batch",batches,key="edit_students_batch",width="stretch",wrap=True)
         confirm=self.col1.toggle("Confirm To Display Students",key="confirm_display_students")
 
         if not confirm:return
@@ -204,7 +204,7 @@ class students_academic_details:
             return pd.DataFrame(),0
 
     def add(self):
-        database=self.col1.pills("Select Department To Add Student Academic Results",department,key="academic_details_add_db",width="stretch")
+        database=self.col1.pills("Select Department To Add Student Academic Results",department,key="academic_details_add_db",width="stretch",wrap=True)
         file=self.col1.file_uploader("Upload Student Academic Results",type=["csv"],key="academic_details_file")
         confirm=self.col1.toggle(f"Confirm To Add The Uploaded File - {file.name if file else ''}",key="academic_details_confirm")
 
@@ -237,7 +237,7 @@ class students_academic_details:
             else:self.col2.warning("Unable To Add Records")
 
     def edit(self):
-        database=self.col1.pills("Select Department To Edit Student Academic Results",department,key="academic_details_edit_db",width="stretch")
+        database=self.col1.pills("Select Department To Edit Student Academic Results",department,key="academic_details_edit_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select A Department");return
 
         try:df=_dataframe(database,self.table)
@@ -253,7 +253,7 @@ class students_academic_details:
             else:self.col2.warning("SOME ERROR HAPPENED WHILE PROCESSING")
 
     def view(self):
-        database=self.col1.pills("Select Department To View Student Academic Results",department,key="academic_details_view_db",width="stretch")
+        database=self.col1.pills("Select Department To View Student Academic Results",department,key="academic_details_view_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select A Department");return
 
         try:df=_dataframe(database,self.table)
@@ -289,7 +289,7 @@ class alumni:
             return pd.DataFrame(),0
 
     def add(self):
-        database=self.col1.pills("Select Department To Add Alumni",department,key="alumni_add_db",width="stretch")
+        database=self.col1.pills("Select Department To Add Alumni",department,key="alumni_add_db",width="stretch",wrap=True)
         file=self.col1.file_uploader("Upload Alumni Data",type=["csv"],key="alumni_file")
         confirm=self.col1.toggle(f"Confirm To Add The Uploaded File - {file.name if file else ''}",key="alumni_confirm")
 
@@ -322,7 +322,7 @@ class alumni:
             else:self.col2.warning("Unable To Add Alumni")
 
     def edit(self):
-        database=self.col1.pills("Select Department To Edit Alumni",department,key="alumni_edit_db",width="stretch")
+        database=self.col1.pills("Select Department To Edit Alumni",department,key="alumni_edit_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select A Department");return
 
         try:df=_dataframe(database,self.table)
@@ -338,7 +338,7 @@ class alumni:
             else:self.col2.warning("SOME ERROR HAPPENED WHILE PROCESSING")
 
     def view(self):
-        database=self.col1.pills("Select Department To View Alumni",department,key="alumni_view_db",width="stretch")
+        database=self.col1.pills("Select Department To View Alumni",department,key="alumni_view_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select A Department");return
 
         try:df=_dataframe(database,self.table)
@@ -388,9 +388,9 @@ class examination_results:
             return False
 
     def release(self):
-        database=self.col1.pills("Select Department",department,key="examination_results_department",width="stretch")
+        database=self.col1.pills("Select Department",department,key="examination_results_department",width="stretch",wrap=True)
         academic_year=self.col1.text_input("Enter Academic Year",placeholder="2026-2027",key="examination_results_year")
-        quarter=self.col1.pills("Select Quarter",["Q1","Q2"],key="examination_results_quarter",width="stretch")
+        quarter=self.col1.pills("Select Quarter",["Q1","Q2"],key="examination_results_quarter",width="stretch",wrap=True)
         proceed=self.col1.checkbox("Proceed To Update Results",key="examination_results_proceed")
 
         if not proceed:return
@@ -419,7 +419,7 @@ class examination_results:
         except Exception as e:self.col2.error(f"Release Error: {e}")
 
     def edit(self):
-        database=self.col1.pills("Select Department To Edit Results",department,key="edit_examination_results_db",width="stretch")
+        database=self.col1.pills("Select Department To Edit Results",department,key="edit_examination_results_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select Department.");return
         if not self.createTable(database):return
 
@@ -439,12 +439,12 @@ class examination_results:
             else:self.col2.warning("SOME ERROR HAPPENED WHILE UPDATING")
 
     def view(self):
-        database=self.col1.pills("Select Department To View Results",department,key="view_examination_results_db",width="stretch")
+        database=self.col1.pills("Select Department To View Results",department,key="view_examination_results_db",width="stretch",wrap=True)
         if not database:self.col1.warning("Please Select Department.");return
         if not self.createTable(database):return
 
         academic_year=self.col1.text_input("Academic Year Filter",key="view_results_year")
-        quarter=self.col1.pills("Quarter Filter",["All","Q1","Q2"],default="All",key="view_results_quarter",width="stretch")
+        quarter=self.col1.pills("Quarter Filter",["All","Q1","Q2"],default="All",key="view_results_quarter",width="stretch",wrap=True)
 
         try:
             filters={"department":database}
@@ -642,7 +642,7 @@ class addTables:
     def add(self):
         with self.col1:
             st.subheader("Add Table")
-            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("add_database"),width="stretch")
+            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("add_database"),width="stretch",wrap=True)
             mode=st.radio("Add Using",["Enter","Upload CSV"],horizontal=True,key=self.key("add_mode"))
             table_name=st.text_input("Enter Table Name",key=self.key("add_table_name"))
             number_of_columns=st.number_input("Number Of Columns",min_value=1,max_value=50,value=3,step=1,key=self.key("column_count")) if mode=="Enter" else None
@@ -692,7 +692,7 @@ class addTables:
     def edit(self):
         with self.col1:
             st.subheader("Edit Table")
-            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("edit_database"),width="stretch")
+            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("edit_database"),width="stretch",wrap=True)
             tables=self.getTables(database) if database else []
             table=st.radio("Select Table",tables,key=self.key("edit_table")) if tables else None
 
@@ -715,7 +715,7 @@ class addTables:
     def view(self):
         with self.col1:
             st.subheader("View Table")
-            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("view_database"),width="stretch")
+            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("view_database"),width="stretch",wrap=True)
             tables=self.getTables(database) if database else []
             table=st.radio("Select Table",tables,key=self.key("view_table")) if tables else None
 
@@ -744,7 +744,7 @@ class addTables:
     def delete(self):
         with self.col1:
             st.subheader("Delete / Drop Table")
-            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("delete_database"),width="stretch")
+            database=st.pills("Select Database / Scope",self.getDatabases(),selection_mode="single",key=self.key("delete_database"),width="stretch",wrap=True)
             tables=self.getTables(database) if database else []
             table=st.radio("Select Table To Delete",tables,key=self.key("delete_table")) if tables else None
             proceed=st.toggle("Proceed To Delete",key=self.key("delete_proceed"),disabled=table is None)

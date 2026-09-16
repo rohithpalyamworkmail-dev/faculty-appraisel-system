@@ -91,12 +91,12 @@ class hackerRankEarth:
                     return
 
                 batches=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batch=st.pills("Select Batch",batches,selection_mode="single")
+                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True)
                 student_options=self.getStudents(selected_batch) if selected_batch else []
                 student=st.selectbox("Select Student",student_options) if student_options else ""
-                platform=st.pills("Platform",["HackerRank","HackerEarth"],selection_mode="single")
+                platform=st.pills("Platform",["HackerRank","HackerEarth"],selection_mode="single",wrap=True)
                 number_of_problems_solved=st.number_input("Number Of Problems Solved",min_value=0,step=1)
-                coding_type=st.pills("Type",["computing","non computing"],selection_mode="single")
+                coding_type=st.pills("Type",["computing","non computing"],selection_mode="single",wrap=True)
 
                 if st.toggle("Check",key="coding_data_check"):
                     if not selected_batch:st.warning("Please select a Batch.")

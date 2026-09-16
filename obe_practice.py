@@ -64,7 +64,7 @@ class obePractice:
 
             with col1:
                 st.subheader("OBE Practice Entry")
-                practice_type=st.pills("Select Practice Type",["CDP","CAP","CAR","CQI","Self-Initiative"],selection_mode="single")
+                practice_type=st.pills("Select Practice Type",["CDP","CAP","CAR","CQI","Self-Initiative"],selection_mode="single",wrap=True)
                 st.markdown("1. CDP - Course Delivery Plan\n2. CAP - Course Assessment Plan\n3. CAR - Course Assessment Report\n4. CQI - Continuous Quality Improvement")
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")

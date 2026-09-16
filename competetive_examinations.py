@@ -87,10 +87,10 @@ class competetiveExaminations:
                     return
 
                 batches=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batch=st.pills("Select Batch",batches,selection_mode="single")
+                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True)
                 selected_students=st.multiselect("Select Students",self.getStudents(selected_batch)) if selected_batch else []
                 exam_name=st.text_input("Exam Name")
-                result=st.pills("Result",["registered","cleared"],selection_mode="single")
+                result=st.pills("Result",["registered","cleared"],selection_mode="single",wrap=True)
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
 

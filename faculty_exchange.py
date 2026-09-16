@@ -82,7 +82,7 @@ class facultyExchange:
                 exchange_faculty_name=st.text_input("Exchange Faculty Name")
                 designation=st.text_input("Designation")
                 employer=st.text_input("Employer")
-                exchange_type=st.pills("Type",self.exchange_types,selection_mode="single")
+                exchange_type=st.pills("Type",self.exchange_types,selection_mode="single",wrap=True)
                 number_of_days=st.number_input("Number Of Days",min_value=1,step=1)
                 proof_url=st.text_input("Proof URL")
                 description=st.text_area("Description")

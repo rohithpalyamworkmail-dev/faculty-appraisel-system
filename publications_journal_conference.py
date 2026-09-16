@@ -158,7 +158,7 @@ class publicationsJournalsConference:
                 elif publication_type=="Book Chapter":
                     chapter_title=st.text_input("Chapter Title")
                     title_of_the_book=st.text_input("Title Of The Book")
-                    book_level=st.pills("National / International",["National","International"],selection_mode="single")
+                    book_level=st.pills("National / International",["National","International"],selection_mode="single",wrap=True)
                     year_of_publication=st.number_input("Year Of Publication",min_value=1900,step=1)
                     chapter_isbn_issn_number=st.text_input("ISBN / ISSN Number")
                     author_position=st.number_input("Author Position",min_value=1,step=1)

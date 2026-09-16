@@ -90,7 +90,7 @@ class internshipsInplantTraining:
                     return
 
                 batches=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batch=st.pills("Select Batch",batches,selection_mode="single")
+                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True)
                 selected_students=st.multiselect("Select Students",self.getStudents(selected_batch)) if selected_batch else []
                 company_name=st.text_input("Company Name")
                 duration_days=st.number_input("Duration in Days",min_value=1,step=1)

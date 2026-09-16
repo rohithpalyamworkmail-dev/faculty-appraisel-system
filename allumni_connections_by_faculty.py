@@ -154,14 +154,14 @@ class alumni:
                     st.warning("No Alumni Batches Are Available.")
                     return
 
-                selected_batches=st.pills("Select Batches",batches,selection_mode="multi",key="alumni_connection_batches")
+                selected_batches=st.pills("Select Batches",batches,selection_mode="multi",key="alumni_connection_batches",wrap=True)
                 selected_students=[]
 
                 if selected_batches:
                     student_options=self.getStudents(selected_batches)
                     selected_students=st.multiselect("Select Alumni",student_options,key="alumni_connection_students")
 
-                activity_type=st.pills("Select Type",self.types,selection_mode="single",key="alumni_connection_type")
+                activity_type=st.pills("Select Type",self.types,selection_mode="single",key="alumni_connection_type",wrap=True)
                 title=st.text_input("Title",key="alumni_connection_title")
                 description=st.text_area("Description",key="alumni_connection_description")
                 proof_url=st.text_input("Proof URL",key="alumni_connection_proof")
