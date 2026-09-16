@@ -62,7 +62,7 @@ class specialAwards:
             with col1:
                 st.subheader("Special Award Entry")
                 award_name=st.text_input("Award Name")
-                award_received_from=st.pills("Award Received From",["Institute","Company","Societies","Organization"],selection_mode="single")
+                award_received_from=st.pills("Award Received From",["Institute","Company","Societies","Organization"],selection_mode="single",wrap=True)
                 issuer_name=st.text_input("Issuer Name")
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
