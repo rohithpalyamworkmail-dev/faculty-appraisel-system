@@ -66,7 +66,7 @@ class specialAwardsFellowships:
 
             with col1:
                 st.subheader("Special Award / Fellowship Entry")
-                award_type=st.pills("Award Type",self.award_types,selection_mode="single")
+                award_type=st.pills("Award Type",self.award_types,selection_mode="single",wrap=True)
                 name=st.text_input("Name")
                 issued_institution=st.text_input("Issued Institution")
                 description=st.text_area("Description")
