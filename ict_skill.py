@@ -63,7 +63,7 @@ class ictSkillRack:
 
             with col1:
                 st.subheader("ICT / Skill Rack Target")
-                target=st.pills("Select ICT / Skill Rack Target",[">90%","80 to 89.99%","70 to 79.99%"],selection_mode="single")
+                target=st.pills("Select ICT / Skill Rack Target",[">90%","80 to 89.99%","70 to 79.99%"],selection_mode="single",wrap=True)
                 proof_url=st.text_input("Proof URL")
 
                 if st.toggle("Check",key="ict_skill_rack_check"):
