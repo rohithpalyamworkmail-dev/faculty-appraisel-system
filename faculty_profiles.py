@@ -543,7 +543,7 @@ class viewProfiles:
 
         with col1:
             st.subheader("Faculty Profile")
-            selected_department=st.pills("Select Department",department,selection_mode="single",key="profile_department")
+            selected_department=st.pills("Select Department",department,selection_mode="single",key="profile_department",wrap=True)
 
             if not selected_department:
                 st.info("Please Select A Department.")
