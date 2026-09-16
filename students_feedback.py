@@ -97,11 +97,11 @@ class studentsFeedback:
                     if semester_df.empty:
                         st.info("You do not handle any subject in this semester.")
                     else:
-                        subject_type=st.pills("Select Subject Type",semester_df["subject_type"].dropna().unique().tolist(),selection_mode="single")
+                        subject_type=st.pills("Select Subject Type",semester_df["subject_type"].dropna().unique().tolist(),selection_mode="single",wrap=True)
 
                         if subject_type:
                             subject_df=semester_df[semester_df["subject_type"]==subject_type]
-                            subject=st.pills("Select Subject",subject_df["subject_name"].dropna().unique().tolist(),selection_mode="single")
+                            subject=st.pills("Select Subject",subject_df["subject_name"].dropna().unique().tolist(),selection_mode="single",wrap=True)
 
                             if st.toggle("Check",key="students_feedback_check"):
                                 if not subject:st.warning("Please select a subject.")
