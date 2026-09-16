@@ -85,7 +85,7 @@ class studentInvolvement:
                     return
 
                 batches=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batch=st.pills("Select Batch",batches,selection_mode="single")
+                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True)
                 selected_students=st.multiselect("Select Students",self.getStudents(selected_batch)) if selected_batch else []
                 team_name=st.text_input("Team Name")
                 startup_name=st.text_input("Startup / Entrepreneurship Name")
