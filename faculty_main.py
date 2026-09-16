@@ -79,7 +79,7 @@ if pill=="Login":
     with col1:
         st.subheader("Faculty Login")
 
-        selected_department=st.pills("Select Department",department,key="faculty_login_department")
+        selected_department=st.pills("Select Department",department,key="faculty_login_department",wrap=True)
         faculty_id=st.text_input("Enter Faculty ID",key="faculty_login_id")
         faculty_password=st.text_input("Enter Faculty Password",type="password",key="faculty_login_password")
 
