@@ -83,7 +83,7 @@ if pill=="Login":
         faculty_id=st.text_input("Enter Faculty ID",key="faculty_login_id")
         faculty_password=st.text_input("Enter Faculty Password",type="password",key="faculty_login_password")
 
-        if st.toggle("Login",key="faculty_login_toggle"):
+        if st.button("Login",key="faculty_login_toggle",type="primary",width="stretch"):
             if not selected_department:
                 st.error("Please select a department.")
 
