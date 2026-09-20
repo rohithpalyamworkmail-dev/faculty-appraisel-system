@@ -132,7 +132,7 @@ class phdGuidance:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="phd_guidance_add"):
+                    if st.button("Add Entry",key="phd_guidance_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"research_type":research_type,"proof_url":proof_url,"description":description,"external":int(external),"internal_full_time":int(internal_full_time),"part_time":int(part_time),"full_time":int(full_time),"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Ph.D Guidance Entry Added Successfully.")

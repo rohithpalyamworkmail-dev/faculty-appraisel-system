@@ -97,7 +97,7 @@ class eventParticipations:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="nirf_event_participations_add"):
+                    if st.button("Add Entry",key="nirf_event_participations_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"event_name":event_name,"event_type":event_type,"number_of_days":int(number_of_days),"description":description,"proof_url":proof_url,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Event Participation Added Successfully.")

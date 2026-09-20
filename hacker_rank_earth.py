@@ -118,7 +118,7 @@ class hackerRankEarth:
                     st.write(f"**Type:** {coding_type}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="coding_data_add"):
+                    if st.button("Add Entry",key="coding_data_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"batch":selected_batch,"student_name_roll_number":student,"platform":platform,"number_of_problems_solved":number_of_problems_solved,"type":coding_type,"credits":credits}])
                         if self.insertDocuments(df):st.success("Coding Data Added Successfully.")
                         else:st.warning("Coding Data Could Not Be Added.")

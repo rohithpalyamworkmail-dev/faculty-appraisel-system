@@ -117,7 +117,7 @@ class placements:
                     st.write(f"**Students:** {', '.join(selected_students)}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="placements_add"):
+                    if st.button("Add Entry",key="placements_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"company":company,"package":package,"student_names_roll_numbers":",".join(selected_students),"batch":selected_batch,"proof_url":proof_url,"description":description,"awarded_credits":credits}])
                         if self.insertDocuments(df):st.success("Placement Entry Added Successfully.")
                         else:st.warning("Placement Entry Could Not Be Added.")

@@ -89,7 +89,7 @@ class moocCourses:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info("Awarded Credits: 5")
 
-                    if st.toggle("Add Entry",key="mooc_courses_add"):
+                    if st.button("Add Entry",key="mooc_courses_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"course_name":course_name,"duration":duration,"uploaded_in":uploaded_in,"proof_url":proof_url,"description":description,"awarded_credits":5}])
 
                         if self.insertDocuments(df):st.success("MOOC Course Added Successfully.")

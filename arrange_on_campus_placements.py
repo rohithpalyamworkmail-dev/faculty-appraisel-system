@@ -124,7 +124,7 @@ class arrangingOnCampusRecruitments:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info("Awarded Credits: 3")
 
-                    if st.toggle("Add Entry",key="on_campus_recruitments_add"):
+                    if st.button("Add Entry",key="on_campus_recruitments_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"credits":3,"company_name":company_name,"academic_year":academic_year,"number_of_students_placed":int(number_of_students_placed),"highest_package":highest_package,"average_package":average_package,"approval_of_principal":int(approval_of_principal),"approval_of_placement_cell":int(approval_of_placement_cell),"is_admin_approved":"yes" if is_admin_approved else "no","proof_url":proof_url}])
 
                         if self.insertDocuments(df):st.success("On-Campus Recruitment Added Successfully.")

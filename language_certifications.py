@@ -78,7 +78,7 @@ class languageCertifications:
                     st.write(f"**Country:** {country}")
                     st.info("Awarded Credits: 1")
 
-                    if st.toggle("Add Entry",key="language_certification_add"):
+                    if st.button("Add Entry",key="language_certification_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"language":language,"country":country,"proof_url":proof_url,"awarded_credits":1}])
                         if self.insertDocuments(df):st.success("Language Certification Added Successfully.")
                         else:st.warning("Language Certification Could Not Be Added.")

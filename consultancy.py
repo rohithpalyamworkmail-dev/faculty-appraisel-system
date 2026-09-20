@@ -156,7 +156,7 @@ class consultancy:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="consultancy_add"):
+                    if st.button("Add Entry",key="consultancy_add",type="secondary",width="stretch"):
                         if self.duplicateEntryCheck(entry_type,description,proof_url,amount):
                             st.warning("Record Already Exists.")
                         else:

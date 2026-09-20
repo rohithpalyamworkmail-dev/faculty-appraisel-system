@@ -101,7 +101,7 @@ class productDevelopmentByStudent:
                     st.write(f"**Product Name:** {product_name}")
                     st.info("Awarded Credits: 2")
 
-                    if st.toggle("Add Entry",key="product_development_add_entry"):
+                    if st.button("Add Entry",key="product_development_add_entry",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"students_names_roll_numbers":students,"team_name":team_name,"product_name":product_name,"product_description":product_description,"proof_url":proof_url,"awarded_credits":2}])
                         if self.insertDocuments(df):st.success("Product Development Added Successfully.")
                         else:st.warning("Product Development Could Not Be Added.")

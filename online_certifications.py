@@ -91,7 +91,7 @@ class onlineCertifications:
                     st.write(f"**Company:** {company}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="online_certification_add"):
+                    if st.button("Add Entry",key="online_certification_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"certification_name":certification_name,"certification_type":certification_type,"certification_company":company,"description":description,"duration":duration,"proof_url":proof_url,"awarded_credits":credits}])
                         if self.insertDocuments(df):st.success("Online Certification Added Successfully.")
                         else:st.warning("Online Certification Could Not Be Added.")

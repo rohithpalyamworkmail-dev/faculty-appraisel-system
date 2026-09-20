@@ -93,7 +93,7 @@ class innovationInTeaching:
             with col2:
                 if proceed:
                     st.info("Awarded Credits: 2")
-                    if st.toggle("Add Entry",key="innovation_in_teaching_add_entry"):
+                    if st.button("Add Entry",key="innovation_in_teaching_add_entry",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"subject_type":subject_type,"problems_faced":problems_faced,"innovation":innovation,"proof_url":proof_url,"awarded_credits":2}])
                         if self.insertDocuments(df):st.success("Innovation In Teaching Added Successfully.")
                         else:st.warning("Innovation In Teaching Could Not Be Added.")

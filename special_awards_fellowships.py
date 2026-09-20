@@ -90,7 +90,7 @@ class specialAwardsFellowships:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info("Awarded Credits: 2")
 
-                    if st.toggle("Add Entry",key="special_awards_fellowships_add"):
+                    if st.button("Add Entry",key="special_awards_fellowships_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"award_type":award_type,"name":name,"issued_institution":issued_institution,"proof_url":proof_url,"description":description,"awarded_credits":2}])
 
                         if self.insertDocuments(df):st.success("Special Award/Fellowship Added Successfully.")

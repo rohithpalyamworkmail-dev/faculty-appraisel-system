@@ -89,7 +89,7 @@ class citationImpacts:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="citation_impacts_add"):
+                    if st.button("Add Entry",key="citation_impacts_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"paper_name":paper_name,"number_of_citations":number_of_citations,"proof_url":proof_url,"description":description,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Citation Impact Added Successfully.")

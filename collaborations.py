@@ -120,7 +120,7 @@ class collaborations:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="collaborations_add"):
+                    if st.button("Add Entry",key="collaborations_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"colloboration_type":colloboration_type,"colloboration_name":colloboration_name,"description":description,"proof_url":proof_url,"funding":int(funding),"colloboration_with":colloboration_with,"organization_name":organization_name,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Collaboration Added Successfully.")

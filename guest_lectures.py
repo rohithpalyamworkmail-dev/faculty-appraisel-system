@@ -101,7 +101,7 @@ class guestLectures:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="guest_lectures_add"):
+                    if st.button("Add Entry",key="guest_lectures_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"institute_type":institute_type,"institution_name":institution_name,"number_of_days":int(number_of_days),"topics_covered":topics_covered,"description":description,"proof_url":proof_url,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Guest Lecture Entry Added Successfully.")

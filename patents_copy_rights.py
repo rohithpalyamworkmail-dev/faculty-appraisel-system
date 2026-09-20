@@ -94,7 +94,7 @@ class patentCopyRights:
                     st.write(f"**Status:** {patent_status}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="patent_copy_rights_add"):
+                    if st.button("Add Entry",key="patent_copy_rights_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"patent_name":patent_name,"patent_type":patent_type,"patent_status":patent_status,"proof_url":proof_url,"description":description,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Patent / Copyright Entry Added Successfully.")

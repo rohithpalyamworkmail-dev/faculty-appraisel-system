@@ -93,7 +93,7 @@ class organizingInternationalConference:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info("Awarded Credits: 5")
 
-                    if st.toggle("Add Entry",key="organizing_international_conference_add"):
+                    if st.button("Add Entry",key="organizing_international_conference_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"conference_name":conference_name,"partner":partner,"scopused_in_index":int(scopused_in_index),"description":description,"proof_url":proof_url,"awarded_credits":5}])
 
                         if self.insertDocuments(df):st.success("International Conference Added Successfully.")

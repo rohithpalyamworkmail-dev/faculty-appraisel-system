@@ -79,7 +79,7 @@ class ictSkillRack:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="ict_skill_rack_add"):
+                    if st.button("Add Entry",key="ict_skill_rack_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"ict_skill_rack_target":target,"proof_url":proof_url,"awarded_credits":credits}])
                         if self.insertDocuments(df):st.success("ICT / Skill Rack Entry Added Successfully.")
                         else:st.warning("ICT / Skill Rack Entry Could Not Be Added.")

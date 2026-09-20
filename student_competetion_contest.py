@@ -124,7 +124,7 @@ class studentCompetetionContest:
                     st.write(f"**Result:** {result}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="student_competetion_add_entry"):
+                    if st.button("Add Entry",key="student_competetion_add_entry",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"name_roll_number":",".join(selected_students),"batch":selected_batch,"participated_in":participated_in,"result":result,"participation_type":participation_type,"team_name":team_name,"proof_url":proof_url,"prize_position":prize_position,"awarded_credits":credits}])
                         if self.insertDocuments(df):st.success("Competition/Contest Entry Added Successfully.")
                         else:st.warning("Competition/Contest Entry Could Not Be Added.")

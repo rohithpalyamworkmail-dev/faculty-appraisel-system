@@ -110,7 +110,7 @@ class facultyExchange:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="faculty_exchange_add"):
+                    if st.button("Add Entry",key="faculty_exchange_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"exchange_faculty_name":exchange_faculty_name,"designation":designation,"employer":employer,"type":exchange_type,"number_of_days":int(number_of_days),"proof_url":proof_url,"description":description,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Faculty Exchange Added Successfully.")

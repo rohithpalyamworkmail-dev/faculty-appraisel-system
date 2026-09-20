@@ -99,7 +99,7 @@ class memberships:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info("Awarded Credits: 1")
 
-                    if st.toggle("Add Entry",key="membership_add"):
+                    if st.button("Add Entry",key="membership_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"membership_name":membership_name,"duration_in_years":duration_in_years,"issued_body_name":issued_body_name,"academic_year":academic_year,"description":description,"proof_url":proof_url,"awarded_credits":1}])
 
                         if self.insertDocuments(df):st.success("Membership Added Successfully.")

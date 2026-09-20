@@ -97,7 +97,7 @@ class newsLettersAndMagazine:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info("Credits: 2")
 
-                    if st.toggle("Add Entry",key="news_letters_and_magazines_add"):
+                    if st.button("Add Entry",key="news_letters_and_magazines_add",type="secondary",width="stretch"):
                         if self.duplicateEntryCheck(publication_type,name,description,proof_url):
                             st.warning("Record Already Exists.")
                         else:

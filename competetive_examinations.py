@@ -112,7 +112,7 @@ class competetiveExaminations:
                     st.write(f"**Students:** {', '.join(selected_students)}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="competitive_examinations_add"):
+                    if st.button("Add Entry",key="competitive_examinations_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"exam_name":exam_name,"result":result,"description":description,"proof_url":proof_url,"student_name_roll_numbers":",".join(selected_students),"batch":selected_batch,"awarded_credits":credits}])
                         if self.insertDocuments(df):st.success("Competitive Examination Entry Added Successfully.")
                         else:st.warning("Competitive Examination Entry Could Not Be Added.")

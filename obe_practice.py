@@ -81,7 +81,7 @@ class obePractice:
                     st.subheader("OBE Practice Details")
                     st.info(f"Awarded Credits: {awarded_credits}")
 
-                    if st.toggle("Add Entry",key="obe_practice_add_entry"):
+                    if st.button("Add Entry",key="obe_practice_add_entry",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"obe_practice_type":practice_type,"description":description,"proof_url":proof_url,"awarded_credits":awarded_credits}])
                         if self.insertDocuments(df):st.success("OBE Practice Added Successfully.")
                         else:st.warning("OBE Practice Could Not Be Added.")

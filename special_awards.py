@@ -83,7 +83,7 @@ class specialAwards:
                     st.write(f"**Issuer:** {issuer_name}")
                     st.info("Awarded Credits: 2")
 
-                    if st.toggle("Add Entry",key="special_awards_add"):
+                    if st.button("Add Entry",key="special_awards_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"award_name":award_name,"award_received_from":award_received_from,"issuer_name":issuer_name,"description":description,"proof_url":proof_url,"awarded_credits":2}])
                         if self.insertDocuments(df):st.success("Special Award Added Successfully.")
                         else:st.warning("Special Award Could Not Be Added.")

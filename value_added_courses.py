@@ -109,7 +109,7 @@ class valueAddedCourses:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="value_added_courses_add"):
+                    if st.button("Add Entry",key="value_added_courses_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"course_name":course_name,"number_of_days":int(number_of_days),"number_of_students":int(number_of_students),"type":course_type,"description":description,"proof_url":proof_url,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Value Added Course Added Successfully.")

@@ -190,7 +190,7 @@ class alumni:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="alumni_connection_add"):
+                    if st.button("Add Entry",key="alumni_connection_add",type="secondary",width="stretch"):
                         if self.duplicateEntryCheck(activity_type,batches_string,students_string,title,description,proof_url):
                             st.warning("Record Already Exists.")
                         else:

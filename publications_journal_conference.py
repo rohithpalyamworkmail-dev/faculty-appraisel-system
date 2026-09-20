@@ -215,7 +215,7 @@ class publicationsJournalsConference:
 
                     st.info(f"Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="publication_add"):
+                    if st.button("Add Entry",key="publication_add",type="secondary",width="stretch"):
                         if self.duplicateEntryCheck(publication_type,paper_title,journal_name,name_of_the_conference,chapter_title,doi_link):
                             st.warning("Record Already Exists.")
                         else:

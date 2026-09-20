@@ -110,7 +110,7 @@ class studentInvolvement:
                     st.write(f"**Students:** {', '.join(selected_students)}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="student_involvement_add"):
+                    if st.button("Add Entry",key="student_involvement_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"batch":selected_batch,"student_name_roll_number":",".join(selected_students),"team_name":team_name,"description":description,"startup_enterpernurship_name":startup_name,"proof_url":proof_url,"awarded_credits":credits}])
                         if self.insertDocuments(df):st.success("Student Involvement Added Successfully.")
                         else:st.warning("Student Involvement Could Not Be Added.")

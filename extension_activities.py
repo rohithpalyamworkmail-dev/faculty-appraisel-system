@@ -81,7 +81,7 @@ class extensionActivities:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info("Awarded Credits: 2")
 
-                    if st.toggle("Add Entry",key="extension_activities_add"):
+                    if st.button("Add Entry",key="extension_activities_add"):
                         df=pd.DataFrame([{"activity_name":activity_name,"description":description,"proof_url":proof_url,"awarded_credits":2}])
 
                         if self.insertDocuments(df):st.success("Extension Activity Added Successfully.")

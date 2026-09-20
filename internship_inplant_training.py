@@ -115,7 +115,7 @@ class internshipsInplantTraining:
                     st.write(f"**Stipend Offered:** {'Yes' if stipend_offered else 'No'}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="internship_training_add"):
+                    if st.button("Add Entry",key="internship_training_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"students_names_roll_numbers":",".join(selected_students),"batch":selected_batch,"company_name":company_name,"duration_days":duration_days,"stipend_offered":int(stipend_offered),"proof_url":proof_url,"awarded_credits":credits}])
                         if self.insertDocuments(df):st.success("Internship/In-Plant Training Added Successfully.")
                         else:st.warning("Internship/In-Plant Training Could Not Be Added.")

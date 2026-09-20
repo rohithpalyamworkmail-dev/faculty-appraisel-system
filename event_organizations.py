@@ -100,7 +100,7 @@ class eventsOrganizations:
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="event_organizations_add"):
+                    if st.button("Add Entry",key="event_organizations_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"event_name":event_name,"organized_with":organized_with,"number_of_days":int(number_of_days),"proof_url":proof_url,"description":description,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Event Organization Added Successfully.")

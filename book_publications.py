@@ -103,7 +103,7 @@ class bookPublications:
                     st.write(f"**Author Type:** {author_type}")
                     st.info(f"Awarded Credits: {credits}")
 
-                    if st.toggle("Add Entry",key="book_publications_add"):
+                    if st.button("Add Entry",key="book_publications_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"book_name":book_name,"book_category":book_category,"publisher_name":publisher_name,"published_year":int(published_year),"author_type":author_type,"proof_url":proof_url,"description":description,"awarded_credits":credits}])
 
                         if self.insertDocuments(df):st.success("Book Publication Added Successfully.")
