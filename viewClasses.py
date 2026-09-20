@@ -548,7 +548,7 @@ class settings:
     def principal_settings(self):
         with self.col2:
             if st.session_state.get("settings_is_principal")!="Yes":st.error("Principal privileges are required.");return
-            st.subheader("Principal Settings");selected_department=st.pills("Select Department",department,selection_mode="single",key="principal_department")
+            st.subheader("Principal Settings");selected_department=st.pills("Select Department",department,selection_mode="single",key="principal_department",wrap=True)
             if selected_department:
                 faculty_df=self.getFacultyList(selected_department)
                 if faculty_df.empty:st.info("No faculty members are available in this department.");return
@@ -653,13 +653,13 @@ class settings:
     def admin_settings(self):
         with self.col2:
             if st.session_state.get("settings_is_admin")!="Yes":st.error("Admin privileges are required.");return
-            st.subheader("Admin Settings");selected_department=st.pills("Select Department",department,selection_mode="single",key="admin_department")
+            st.subheader("Admin Settings");selected_department=st.pills("Select Department",department,selection_mode="single",key="admin_department",wrap=True)
             if not selected_department:return
             tab_approve,tab_deny,tab_view=st.tabs(["Approve","Deny","View"])
             with tab_approve:st.subheader("HoD Denied Records",divider=True);self.render_admin_activity(selected_department,"hod_denied",f"admin_approve_{selected_department}")
             with tab_deny:st.subheader("HoD Approved Records",divider=True);self.render_admin_activity(selected_department,"hod_approved",f"admin_deny_{selected_department}")
             with tab_view:
-                view_option=st.pills("View",["Approvals","Denials","Faculty Profile"],selection_mode="single",key=f"admin_view_option_{selected_department}")
+                view_option=st.pills("View",["Approvals","Denials","Faculty Profile"],selection_mode="single",key=f"admin_view_option_{selected_department}",wrap=True)
                 if view_option=="Approvals":st.subheader("Admin Approved Records",divider=True);self.render_admin_activity(selected_department,"admin_approved",f"admin_view_approved_{selected_department}")
                 elif view_option=="Denials":st.subheader("Admin Denied Records",divider=True);self.render_admin_activity(selected_department,"admin_denied",f"admin_view_denied_{selected_department}")
                 elif view_option=="Faculty Profile":st.subheader("Faculty Profile",divider=True);self.admin_faculty_profile(selected_department)
