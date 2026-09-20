@@ -7,10 +7,11 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
-from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer,Table,TableStyle,Image,PageBreak,KeepTogether
+from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer,Table,TableStyle,Image,PageBreak,KeepTogether,LongTable
 from reportlab.graphics.shapes import Drawing
-from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.charts.linecharts import HorizontalLineChart
 from reportlab.graphics.charts.legends import Legend
+from reportlab.graphics.widgets.markers import makeMarker
 from streamlit_extras.metric_cards import style_metric_cards
 from global_fields import department
 from database import get_rows,get_one,decode_bytea
@@ -288,61 +289,86 @@ class viewProfiles:
     def heading(self,title,style,width):
         line=Table([[""]],colWidths=[width],rowHeights=[2])
         line.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#0F766E"))]))
-        return [Spacer(1,7),self.p(title.upper(),style),line,Spacer(1,7)]
+        return [Spacer(1,7),self.p(title.upper(),style),line,Spacer(1,8)]
 
-    def makeTable(self,data,widths=None,header=True,font=8):
-        table=Table(data,colWidths=widths,repeatRows=1 if header else 0)
-        commands=[("GRID",(0,0),(-1,-1),.35,colors.HexColor("#CBD5E1")),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("ALIGN",(0,0),(-1,-1),"CENTER"),("FONTSIZE",(0,0),(-1,-1),font),("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5)]
+    def _tableStyles(self,styles=None):
+        styles=styles or getSampleStyleSheet()
+        header=ParagraphStyle("pdf_table_header",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=16,leading=18,textColor=colors.HexColor("#115E59"),alignment=TA_CENTER,wordWrap="CJK")
+        body=ParagraphStyle("pdf_table_body",parent=styles["BodyText"],fontName="Helvetica",fontSize=14,leading=17,textColor=colors.HexColor("#0F172A"),alignment=TA_CENTER,wordWrap="CJK")
+        body_left=ParagraphStyle("pdf_table_body_left",parent=body,alignment=0)
+        label=ParagraphStyle("pdf_personal_label",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=11,leading=13,textColor=colors.HexColor("#115E59"),wordWrap="CJK")
+        value=ParagraphStyle("pdf_personal_value",parent=styles["BodyText"],fontName="Helvetica",fontSize=14,leading=17,textColor=colors.HexColor("#0F172A"),wordWrap="CJK")
+        return header,body,body_left,label,value
 
+    def makeTable(self,data,widths=None,header=True,header_font=16,body_font=14,align="CENTER",padding=6):
+        styles=getSampleStyleSheet()
+        head=ParagraphStyle(f"mt_head_{header_font}_{align}",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=header_font,leading=header_font+2,textColor=colors.HexColor("#115E59"),alignment=TA_CENTER,wordWrap="CJK")
+        body=ParagraphStyle(f"mt_body_{body_font}_{align}",parent=styles["BodyText"],fontName="Helvetica",fontSize=body_font,leading=body_font+3,textColor=colors.HexColor("#0F172A"),alignment=TA_CENTER if align=="CENTER" else 0,wordWrap="CJK")
+        cooked=[]
+        for r,row in enumerate(data):
+            cooked.append([value if isinstance(value,Paragraph) else self.p(value,head if header and r==0 else body) for value in row])
+        table=Table(cooked,colWidths=widths,repeatRows=1 if header else 0,hAlign="LEFT")
+        commands=[("GRID",(0,0),(-1,-1),.45,colors.HexColor("#CBD5E1")),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("ALIGN",(0,0),(-1,-1),align),("TOPPADDING",(0,0),(-1,-1),padding),("BOTTOMPADDING",(0,0),(-1,-1),padding),("LEFTPADDING",(0,0),(-1,-1),5),("RIGHTPADDING",(0,0),(-1,-1),5)]
         if header:commands += [("BACKGROUND",(0,0),(-1,0),colors.HexColor("#D5F5EF")),("TEXTCOLOR",(0,0),(-1,0),colors.HexColor("#115E59")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold")]
-
         table.setStyle(TableStyle(commands))
         return table
 
-    def pdfDataTable(self,df,width,normal):
-        if df.empty:return None
+    def personalDetailsTable(self,details,width,styles):
+        _,_,_,label_style,value_style=self._tableStyles(styles)
+        rows=[]
+        for i in range(0,len(details),2):
+            row=[]
+            for key,value in details[i:i+2]:
+                row.extend([self.p(key.replace("_"," ").title(),label_style),self.p(value,value_style)])
+            while len(row)<4:row.extend(["",""])
+            rows.append(row)
+        if not rows:return None
+        table=Table(rows,colWidths=[width*.20,width*.30,width*.20,width*.30],hAlign="LEFT")
+        table.setStyle(TableStyle([("GRID",(0,0),(-1,-1),.45,colors.HexColor("#CBD5E1")),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7),("LEFTPADDING",(0,0),(-1,-1),6),("RIGHTPADDING",(0,0),(-1,-1),6)]))
+        return table
 
-        n=len(df.columns)
-        font=8 if n<=5 else 6.7 if n<=8 else 5.7 if n<=11 else 4.8
-        head=ParagraphStyle(f"ph{n}",parent=normal,fontName="Helvetica-Bold",fontSize=font,leading=font+1.1,textColor=colors.HexColor("#115E59"),alignment=TA_CENTER)
-        cell=ParagraphStyle(f"pc{n}",parent=normal,fontSize=font,leading=font+1.1)
-        data=[[self.p(str(column).replace("_"," ").title(),head) for column in df.columns]]
+    def _dataColumnChunks(self,columns):
+        columns=list(columns)
+        if len(columns)<=4:return [columns]
+        first=columns[0]
+        rest=columns[1:]
+        return [[first]+rest[i:i+3] for i in range(0,len(rest),3)]
 
-        for _,row in df.iterrows():data.append([self.p(self.safeValue(value)[:350],cell) for value in row.tolist()])
+    def pdfDataTables(self,df,width,normal=None):
+        if df is None or df.empty:return []
+        styles=getSampleStyleSheet()
+        header,body,_,_,_=self._tableStyles(styles)
+        flowables=[]
+        chunks=self._dataColumnChunks(df.columns)
+        for index,columns in enumerate(chunks):
+            sub=df[columns]
+            data=[[self.p(str(column).replace("_"," ").title(),header) for column in columns]]
+            for _,row in sub.iterrows():
+                data.append([self.p(self.safeValue(value)[:500],body) for value in row.tolist()])
+            table=LongTable(data,colWidths=[width/len(columns)]*len(columns),repeatRows=1,hAlign="LEFT",splitByRow=1)
+            table.setStyle(TableStyle([("GRID",(0,0),(-1,-1),.45,colors.HexColor("#CBD5E1")),("VALIGN",(0,0),(-1,-1),"TOP"),("ALIGN",(0,0),(-1,-1),"CENTER"),("BACKGROUND",(0,0),(-1,0),colors.HexColor("#D5F5EF")),("TEXTCOLOR",(0,0),(-1,0),colors.HexColor("#115E59")),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),5),("RIGHTPADDING",(0,0),(-1,-1),5)]))
+            flowables.append(table)
+            if index<len(chunks)-1:flowables.append(Spacer(1,8))
+        return flowables
 
-        return self.makeTable(data,[width/n]*n,True,font)
+    def pdfDataTable(self,df,width,normal=None):
+        tables=self.pdfDataTables(df,width,normal)
+        return tables[0] if tables else None
 
-    def categoryChart(self,category_scores,width):
-        drawing=Drawing(width,235)
-        chart=VerticalBarChart();chart.x=45;chart.y=45;chart.width=width-90;chart.height=150
-        categories=list(self.category_caps);keys=["total_score_achieved","score_approved","score_considered","max_score"]
-        chart.data=[[float(category_scores[category][key]) for category in categories] for key in keys]
-        chart.categoryAxis.categoryNames=["Academic","R & D","Extensions"]
-        highest=max([max(series) if series else 0 for series in chart.data]+[0])
-        chart.valueAxis.valueMin=0;chart.valueAxis.valueMax=max(5,highest+5);chart.valueAxis.valueStep=max(1,int(chart.valueAxis.valueMax/5))
-        palette=[colors.HexColor("#64748B"),colors.HexColor("#2563EB"),colors.HexColor("#0F766E"),colors.HexColor("#94A3B8")]
-
-        for i,color in enumerate(palette):chart.bars[i].fillColor=color
-
-        legend=Legend();legend.x=45;legend.y=220;legend.fontSize=7;legend.colorNamePairs=list(zip(palette,["Total Achieved","Approved","Considered","Maximum"]))
-        drawing.add(chart);drawing.add(legend)
-        return drawing
-
-    def activityChart(self,all_scores,width):
-        rows=sorted([(self.getActivityTitle(table),float(value.get("score_approved",0)),float(value.get("score_considered",0))) for table,value in all_scores.items()],key=lambda item:item[2],reverse=True)[:10]
-        drawing=Drawing(width,255)
-
-        if not rows:return drawing
-
-        chart=VerticalBarChart();chart.x=40;chart.y=80;chart.width=width-70;chart.height=125
-        chart.data=[[row[1] for row in rows],[row[2] for row in rows]]
-        chart.categoryAxis.categoryNames=[row[0][:14] for row in rows];chart.categoryAxis.labels.angle=35;chart.categoryAxis.labels.fontSize=5.5;chart.categoryAxis.labels.dy=-8
-        highest=max([max(series) if series else 0 for series in chart.data]+[0])
-        chart.valueAxis.valueMin=0;chart.valueAxis.valueMax=max(2,highest+2)
-        palette=[colors.HexColor("#2563EB"),colors.HexColor("#0F766E")]
-        chart.bars[0].fillColor=palette[0];chart.bars[1].fillColor=palette[1]
-
-        legend=Legend();legend.x=45;legend.y=240;legend.fontSize=7;legend.colorNamePairs=list(zip(palette,["Approved","Considered"]))
+    def requirementLineChart(self,category_req,width):
+        categories=category_req["Category"].astype(str).tolist() if not category_req.empty else list(self.category_caps)
+        required=pd.to_numeric(category_req["Minimum Required"],errors="coerce").fillna(0).astype(float).tolist() if not category_req.empty else [0.0]*len(categories)
+        considered=pd.to_numeric(category_req["Score Considered"],errors="coerce").fillna(0).astype(float).tolist() if not category_req.empty else [0.0]*len(categories)
+        drawing=Drawing(width,360)
+        chart=HorizontalLineChart();chart.x=65;chart.y=75;chart.width=width-105;chart.height=215
+        chart.data=[required,considered]
+        chart.categoryAxis.categoryNames=["Academic Activities","Research & Development","Academic Extensions"][:len(categories)]
+        chart.categoryAxis.labels.fontName="Helvetica";chart.categoryAxis.labels.fontSize=10;chart.categoryAxis.labels.dy=-12
+        highest=max(required+considered+[5.0]);chart.valueAxis.valueMin=0;chart.valueAxis.valueMax=max(5.0,highest+5.0);chart.valueAxis.valueStep=max(1,int(chart.valueAxis.valueMax/5))
+        chart.valueAxis.labels.fontSize=9;chart.valueAxis.labelTextFormat="%0.0f"
+        chart.lines[0].strokeColor=colors.HexColor("#DC2626");chart.lines[0].strokeWidth=2.4;chart.lines[0].symbol=makeMarker("Circle")
+        chart.lines[1].strokeColor=colors.HexColor("#0F766E");chart.lines[1].strokeWidth=2.4;chart.lines[1].symbol=makeMarker("FilledCircle")
+        legend=Legend();legend.x=65;legend.y=325;legend.fontName="Helvetica";legend.fontSize=11;legend.dx=10;legend.dy=10;legend.deltax=120;legend.colorNamePairs=[(colors.HexColor("#DC2626"),"Minimum Required"),(colors.HexColor("#0F766E"),"Score Considered")]
         drawing.add(chart);drawing.add(legend)
         return drawing
 
@@ -365,42 +391,32 @@ class viewProfiles:
         all_dataframes=all_dataframes or all_df_from_tables or {}
         faculty_profile=faculty_profile or {}
         buffer=BytesIO()
-        page_width,_=A4;margin=22;width=page_width-margin*2
+        page_width,page_height=A4;margin=22;width=page_width-margin*2
         doc=SimpleDocTemplate(buffer,pagesize=A4,leftMargin=margin,rightMargin=margin,topMargin=margin,bottomMargin=26)
         styles=getSampleStyleSheet()
-        title=ParagraphStyle("title",parent=styles["Title"],fontName="Helvetica-Bold",fontSize=19,leading=23,textColor=colors.HexColor("#17365D"),alignment=TA_CENTER)
-        section=ParagraphStyle("section",parent=styles["Heading1"],fontName="Helvetica-Bold",fontSize=13,textColor=colors.HexColor("#0F766E"))
-        activity=ParagraphStyle("activity",parent=styles["Heading2"],fontName="Helvetica-Bold",fontSize=10,textColor=colors.HexColor("#334155"))
-        normal=ParagraphStyle("normal",parent=styles["BodyText"],fontSize=7.2,leading=8.6)
-        label=ParagraphStyle("label",parent=normal,fontName="Helvetica-Bold",textColor=colors.HexColor("#0F766E"))
+        title=ParagraphStyle("title",parent=styles["Title"],fontName="Helvetica-Bold",fontSize=22,leading=26,textColor=colors.HexColor("#17365D"),alignment=TA_CENTER)
+        section=ParagraphStyle("section",parent=styles["Heading1"],fontName="Helvetica-Bold",fontSize=18,leading=22,textColor=colors.HexColor("#0F766E"),spaceAfter=4)
+        activity=ParagraphStyle("activity",parent=styles["Heading2"],fontName="Helvetica-Bold",fontSize=18,leading=22,textColor=colors.HexColor("#334155"),spaceBefore=4,spaceAfter=6)
+        normal=ParagraphStyle("normal",parent=styles["BodyText"],fontName="Helvetica",fontSize=14,leading=17,textColor=colors.HexColor("#0F172A"),wordWrap="CJK")
         story=[]
 
         if self.institute_banner.exists():
-            try:story.append(Image(str(self.institute_banner),width=width,height=78))
+            try:
+                banner=Image(str(self.institute_banner));banner._restrictSize(width,46);banner.hAlign="CENTER";story += [banner,Spacer(1,5)]
             except:pass
 
-        story += [Spacer(1,10),self.p("FACULTY APPRAISAL SYSTEM",title),Spacer(1,8)]
+        story += [self.p("FACULTY APPRAISAL SYSTEM",title),Spacer(1,8)]
 
         if faculty_image:
-            try:story.append(Image(BytesIO(faculty_image),width=width,height=210))
+            try:
+                photo=Image(BytesIO(faculty_image));photo._restrictSize(width,270);photo.hAlign="CENTER";story += [photo,Spacer(1,6)]
             except:pass
 
         story += self.heading("Faculty Personal Details",section,width)
         details=[(key,value) for key,value in faculty_profile.items() if key!="faculty_password"]
-        rows=[]
-
-        for i in range(0,len(details),2):
-            row=[]
-
-            for key,value in details[i:i+2]:
-                row.extend([self.p(key.replace("_"," ").title(),label),self.p(value,normal)])
-
-            while len(row)<4:row.extend(["",""])
-
-            rows.append(row)
-
-        if rows:story.append(self.makeTable(rows,[width*.18,width*.32,width*.18,width*.32],False,7.0))
-
+        personal_table=self.personalDetailsTable(details,width,styles)
+        if personal_table:story.append(personal_table)
+        story.append(Spacer(1,22))
         story.append(PageBreak())
 
         category_scores=self.getCategoryWiseScores(all_scores)
@@ -408,53 +424,47 @@ class viewProfiles:
 
         story += self.heading("Category Wise Performance",section,width)
         category_data=[["Category","Total Achieved","Approved","Considered","Maximum"]]+[[category,f"{value['total_score_achieved']:.2f}",f"{value['score_approved']:.2f}",f"{value['score_considered']:.2f}",f"{value['max_score']:.2f}"] for category,value in category_scores.items()]+[["TOTAL",f"{sum(value['total_score_achieved'] for value in category_scores.values()):.2f}",f"{sum(value['score_approved'] for value in category_scores.values()):.2f}",f"{final_score:.2f}","100.00"]]
-        story.append(self.makeTable(category_data,[width*.30,width*.18,width*.17,width*.17,width*.18],True,7.5))
+        story.append(self.makeTable(category_data,[width*.30,width*.18,width*.17,width*.17,width*.18],True,16,14))
 
         story += self.heading("Minimum Requirement",section,width)
         req_data=[["Category","Minimum Required","Score Considered","Satisfied"]]+category_req.values.tolist()+[["TOTAL",f"{requirements['minimum_total_marks']:.2f}",f"{final_score:.2f}","YES" if category_ok else "NO"]]
-        story.append(self.makeTable(req_data,[width*.40,width*.20,width*.20,width*.20],True,7.5))
-        story += [Spacer(1,6),self.p(f"Designation: {requirements['designation']} | PhD Holder: {requirements['is_phd_holder']}",normal)]
+        story.append(self.makeTable(req_data,[width*.40,width*.20,width*.20,width*.20],True,16,14))
+        story += [Spacer(1,7),self.p(f"Designation: {requirements['designation']} | PhD Holder: {requirements['is_phd_holder']}",normal)]
 
-        if not requirements["recognized"]:story += [Spacer(1,4),self.p("Designation is not mapped to a minimum-requirement rule.",normal)]
+        if not requirements["recognized"]:story += [Spacer(1,5),self.p("Designation is not mapped to a minimum-requirement rule.",normal)]
 
         if not activity_req.empty:
             story += self.heading("Activity Wise Mandatory Minimums",section,width)
-            story.append(self.makeTable([["Activity","Minimum Required","Score Considered","Satisfied"]]+activity_req.values.tolist(),[width*.52,width*.16,width*.16,width*.16],True,7.1))
+            story.append(self.makeTable([["Activity","Minimum Required","Score Considered","Satisfied"]]+activity_req.values.tolist(),[width*.52,width*.16,width*.16,width*.16],True,16,14))
 
         story += self.heading("Final Result",section,width)
         performance=final_score
-        story.append(self.makeTable([["Final Score","Maximum","Performance","Category Minimums","Activity Minimums","Overall"],[f"{final_score:.2f}","100.00",f"{performance:.2f}%","YES" if category_ok else "NO","YES" if activity_ok else "NO","SATISFIED" if overall_ok else "NOT SATISFIED"]],[width/6]*6,True,7.0))
+        story.append(self.makeTable([["Final Score","Maximum","Performance","Category Minimums","Activity Minimums","Overall"],[f"{final_score:.2f}","100.00",f"{performance:.2f}%","YES" if category_ok else "NO","YES" if activity_ok else "NO","SATISFIED" if overall_ok else "NOT SATISFIED"]],[width/6]*6,True,16,14))
         story.append(PageBreak())
 
-        story += self.heading("Performance Charts",section,width)
-        story.append(self.categoryChart(category_scores,width))
-        story.append(Spacer(1,5))
-        story.append(self.activityChart(all_scores,width))
+        story += self.heading("Category Requirement vs Considered Score",section,width)
+        story.append(Spacer(1,28))
+        story.append(self.requirementLineChart(category_req,width))
         story.append(PageBreak())
 
         displayed=set()
 
         for category,activities in self.categories.items():
             valid=[(title_name,table) for title_name,table in activities if table in all_scores and table not in displayed]
-
             if not valid:continue
-
             story += self.heading(category,section,width)
 
             for title_name,table in valid:
-                displayed.add(table)
-                score=all_scores[table]
-                block=[self.p(title_name,activity),self.makeTable([["Total Achieved","Approved","Maximum","Considered","Minimum"],[f"{score['total_score_achieved']:.2f}",f"{score['score_approved']:.2f}",f"{score['max_score']:.2f}",f"{score['score_considered']:.2f}",f"{score.get('minimum_required',0):.2f}"]],[width/5]*5,True,7.2),Spacer(1,5)]
-                story.append(KeepTogether(block))
+                displayed.add(table);score=all_scores[table]
+                score_table=self.makeTable([["Total Achieved","Approved","Maximum","Considered","Minimum"],[f"{score['total_score_achieved']:.2f}",f"{score['score_approved']:.2f}",f"{score['max_score']:.2f}",f"{score['score_considered']:.2f}",f"{score.get('minimum_required',0):.2f}"]],[width/5]*5,True,16,14)
+                story.append(KeepTogether([self.p(title_name,activity),score_table,Spacer(1,7)]))
                 df=all_dataframes.get(table,pd.DataFrame())
 
-                if df.empty:
-                    story.append(self.p("No score-eligible records present.",normal))
+                if df.empty:story.append(self.p("No score-eligible records present.",normal))
                 else:
-                    table_obj=self.pdfDataTable(df,width,normal)
-                    if table_obj:story.append(table_obj)
+                    for flowable in self.pdfDataTables(df,width,normal):story.append(flowable)
 
-                story.append(Spacer(1,10))
+                story.append(Spacer(1,14))
 
         doc.build(story,onFirstPage=self.pageBorder,onLaterPages=self.pageBorder)
         buffer.seek(0)
