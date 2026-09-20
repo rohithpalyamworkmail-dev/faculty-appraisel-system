@@ -522,7 +522,7 @@ class settings:
 
     def login(self):
         with self.col2:
-            st.subheader("Administrative Login");selected_department=st.selectbox("Select Department",department,key="settings_department_selection");faculty_id=st.text_input("Faculty ID",key="settings_faculty_id_input");faculty_password=st.text_input("Password",type="password",key="settings_faculty_password");login=st.button("Login",key="settings_login_toggle")
+            st.subheader("Administrative Login");selected_department=st.selectbox("Select Department",department,key="settings_department_selection");faculty_id=st.text_input("Faculty ID",key="settings_faculty_id_input");faculty_password=st.text_input("Password",type="password",key="settings_faculty_password");login=st.button("Login",key="settings_login_toggle",type="primary",width="stretch")
             if login:
                 if not selected_department or not faculty_id or not faculty_password:st.warning("Please enter Department, Faculty ID and Password.");return
                 try:
