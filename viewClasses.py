@@ -380,6 +380,25 @@ class settings:
             return pd.DataFrame([{"record_id":r.get("id"),"faculty_id":r.get("faculty_id"),"faculty_name":r.get("faculty_name")} for r in rows])
         except Exception as e:st.error(f"Unable to fetch {table} records: {e}");return pd.DataFrame()
 
+    def get_approved_pending_summary(self,category):
+        rows=[]
+        for activity in categories.get(category,[]):
+            table=self.resolve_table(activity);count=0
+            if table:
+                try:
+                    data=get_rows(table,{"department":self.current_department},"hod_approval,admin_approval")
+                    count=sum(1 for r in data if r.get("hod_approval")=="APPROVED" and r.get("admin_approval")=="UN KNOWN")
+                except Exception:count=0
+            rows.append({"Tables":activity,"Approved Count":int(count)})
+        return pd.DataFrame(rows)
+
+    def get_approved_pending_records(self,table):
+        try:
+            rows=get_rows(table,{"department":self.current_department},"id,faculty_id,faculty_name,hod_approval,admin_approval",order_by="id",descending=True)
+            rows=[r for r in rows if r.get("hod_approval")=="APPROVED" and r.get("admin_approval")=="UN KNOWN"]
+            return pd.DataFrame([{"record_id":r.get("id"),"faculty_id":r.get("faculty_id"),"faculty_name":r.get("faculty_name")} for r in rows])
+        except Exception as e:st.error(f"Unable to fetch {table} approved records: {e}");return pd.DataFrame()
+
     def get_record(self,table,record_id,department_name=None):
         try:
             row=get_one(table,{"department":department_name or self.current_department,"id":record_id})
@@ -387,12 +406,13 @@ class settings:
             result=dict(row);result["record_id"]=result.pop("id",record_id);result.pop("department",None);return result
         except Exception as e:st.error(f"Unable to fetch record: {e}");return {}
 
-    def update_hod_status(self,table,record_id,new_status,current_status):
+    def update_hod_status(self,table,record_id,new_status,current_status,require_admin_unknown=False):
         try:
             row=get_one(table,{"department":self.current_department,"id":record_id},"id,hod_approval,admin_approval")
             if not row:return False
             if current_status=="UN KNOWN" and not (row.get("hod_approval")=="UN KNOWN" and row.get("admin_approval")=="UN KNOWN"):return False
             if current_status!="UN KNOWN" and row.get("hod_approval")!=current_status:return False
+            if require_admin_unknown and row.get("admin_approval")!="UN KNOWN":return False
             update_rows(table,{"hod_approval":new_status},{"department":self.current_department,"id":record_id})
             return True
         except Exception as e:st.error(f"Update Error: {e}");return False
@@ -433,6 +453,36 @@ class settings:
         if records_df.empty:st.info("No matching records are available in this table.");return
         options={f"{row['faculty_name']} - {row['faculty_id']} - Record {row['record_id']}":int(row["record_id"]) for _,row in records_df.iterrows()};selected=st.selectbox("Select Faculty / Record",list(options.keys()),key=f"hod_{status}_record")
         if selected:self.render_record_card(table,options[selected],status,allow_deny=status=="UN KNOWN")
+
+    def render_approved_to_denial_record(self,table,record_id):
+        record=self.get_record(table,record_id)
+        if not record:return
+        with st.container(border=True):
+            st.subheader(f"{record.get('faculty_name','Faculty')} - {record.get('faculty_id','')}",divider=True,text_alignment="center")
+            data=[(k,v) for k,v in record.items() if k not in ["record_id","faculty_name","faculty_id"]]
+            for i in range(0,len(data),3):
+                cols=st.columns(3)
+                for j,(key,value) in enumerate(data[i:i+3]):
+                    with cols[j]:st.caption(key.replace("_"," ").title());st.write(value if value not in [None,""] else "—")
+            st.info("This record is HoD approved and is still pending Admin action.")
+            if st.button("Change Approval To Denial",type="primary",width="stretch",key=f"hod_approved_to_denied_{table}_{record_id}"):
+                if self.update_hod_status(table,record_id,"DENIED","APPROVED",require_admin_unknown=True):st.success("Approved Record Changed To Denied Successfully.");st.rerun()
+                else:st.warning("Record Could Not Be Changed. It may already have been processed by Admin.")
+
+    def render_approved_to_denial_tab(self):
+        selected_category=st.selectbox("Select Category",list(categories.keys()),key="hod_approved_to_denial_category")
+        if not selected_category:return
+        summary=self.get_approved_pending_summary(selected_category)
+        st.dataframe(summary,use_container_width=True,hide_index=True,column_config={"Tables":st.column_config.TextColumn("Tables"),"Approved Count":st.column_config.NumberColumn("Approved Count")})
+        selected_activity=st.selectbox("Select Table",categories[selected_category],key="hod_approved_to_denial_activity")
+        if not selected_activity:return
+        table=self.resolve_table(selected_activity)
+        if not table:st.warning(f"No approval-ready database table exists for: {selected_activity}");return
+        records_df=self.get_approved_pending_records(table)
+        if records_df.empty:st.info("No HoD-approved records pending Admin action are available in this table.");return
+        options={f"{row['faculty_name']} - {row['faculty_id']} - Record {row['record_id']}":int(row["record_id"]) for _,row in records_df.iterrows()}
+        selected=st.selectbox("Select Faculty / Record",list(options.keys()),key="hod_approved_to_denial_record")
+        if selected:self.render_approved_to_denial_record(table,options[selected])
 
     def getFacultyList(self,department_name=None):
         try:return pd.DataFrame(get_rows("faculty",{"department":department_name or self.current_department},"faculty_name,faculty_id",order_by="faculty_name"))
@@ -558,9 +608,11 @@ class settings:
 
     def hod_settings(self):
         with self.col2:
-            st.subheader("HoD Settings");tab_approvals,tab_denials,tab_feedback=st.tabs(["Approvals","Denials","Give Feedback"])
+            st.subheader("HoD Settings")
+            tab_approvals,tab_denials,tab_approved_to_denial,tab_feedback=st.tabs(["Approvals","Denials","Approve To Denial","Give Feedback"])
             with tab_approvals:self.render_status_tab("UN KNOWN")
             with tab_denials:self.render_status_tab("DENIED")
+            with tab_approved_to_denial:self.render_approved_to_denial_tab()
             with tab_feedback:
                 faculty_df=self.getFacultyList()
                 if faculty_df.empty:st.info("No faculty members are available.")
