@@ -438,6 +438,15 @@ class settings:
         try:return pd.DataFrame(get_rows("faculty",{"department":department_name or self.current_department},"faculty_name,faculty_id",order_by="faculty_name"))
         except Exception as e:st.error(f"Faculty Fetch Error: {e}");return pd.DataFrame()
 
+    def getMenteeRollNumbers(self,faculty_id,department_name=None):
+        dept=department_name or self.current_department
+        try:
+            rows=get_rows("students",{"department":dept,"student_mentor_id":str(faculty_id)},"student_roll_number")
+            return {str(row.get("student_roll_number","")).strip() for row in rows if str(row.get("student_roll_number","")).strip()}
+        except Exception as e:
+            st.error(f"Mentee Fetch Error: {e}")
+            return set()
+
     def getFacultyTableRows(self,table,faculty_id,department_name=None):
         dept=department_name or self.current_department
         aliases={"innovations_in_teaching_learning":"innovation_in_teaching","news_letters_magazines":"news_letters_and_magazines","alumini_networking":"alumni_connection_by_faculties"}
@@ -448,9 +457,23 @@ class settings:
             if table=="subjects":
                 df=_frame("subjects",dept)
                 if df.empty:return df
-                return df[df["alloted_faculty_ids"].fillna("").apply(lambda x:str(faculty_id).strip() in [i.strip() for i in str(x).split(",")])]
+                column="alloted_faculty_ids"
+                if column not in df.columns:return pd.DataFrame()
+                faculty_id=str(faculty_id).strip()
+                return df[df[column].fillna("").astype(str).apply(lambda x:faculty_id in [i.strip() for i in x.split(",") if i.strip()])].reset_index(drop=True)
+            if table in {"students_academic_details","alumni"}:
+                mentees=self.getMenteeRollNumbers(faculty_id,dept)
+                if not mentees:return pd.DataFrame()
+                df=_frame(table,dept)
+                if df.empty:return df
+                candidates=["student_roll_numner","student_roll_number"] if table=="students_academic_details" else ["student_roll_number","student_roll_numner"]
+                roll_column=next((c for c in candidates if c in df.columns),None)
+                if not roll_column:return pd.DataFrame()
+                return df[df[roll_column].fillna("").astype(str).str.strip().isin(mentees)].reset_index(drop=True)
             return _frame(table,dept,filters={"faculty_id":str(faculty_id)})
-        except:return pd.DataFrame()
+        except Exception as e:
+            st.error(f"Faculty Table Fetch Error ({table}): {e}")
+            return pd.DataFrame()
 
     def cleanFacultyDataFrame(self,df):
         if df.empty:return df
