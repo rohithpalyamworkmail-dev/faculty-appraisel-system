@@ -5,3 +5,5 @@ supabase
 pandas
 plotly
 reportlab
+openpyxl
+httpx
