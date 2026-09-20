@@ -117,7 +117,7 @@ class studentsFeedback:
                     awarded_credits=self.calculateCredits(feed_back_score)
                     st.info(f"Awarded Credits: {awarded_credits}")
 
-                    if st.toggle("Add Entry",key="students_feedback_add_entry"):
+                    if st.button("Add Entry",key="students_feedback_add_entry",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"subject_name":subject,"subject_semester":semester,"subject_type":subject_type,"feed_back_score":feed_back_score,"awarded_credits":awarded_credits}])
                         if self.insertDocuments(df):st.success("Student Feedback Added Successfully.")
                         else:st.warning("Student Feedback Could Not Be Added.")
