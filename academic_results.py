@@ -122,7 +122,7 @@ class academicResults:
                     awarded_credits=self.calculateCredits(pass_percent)
                     st.info(f"Awarded Credits: {awarded_credits}")
 
-                    if st.toggle("Add Entry",key="academic_results_add_entry"):
+                    if st.button("Add Entry",key="academic_results_add_entry",type="secondary",width="stretch"):
                         subject_data=subjects_df[(subjects_df["subject_semister"]==semister)&(subjects_df["subject_type"]==subject_type)&(subjects_df["subject_name"]==subject)]
                         subject_code=subject_data.iloc[0]["subject_code"] if not subject_data.empty else ""
                         subject_credits=subject_data.iloc[0]["subject_credits"] if not subject_data.empty else 0
