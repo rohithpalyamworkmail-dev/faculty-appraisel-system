@@ -691,7 +691,8 @@ begin
         "max_scores_for_fs":{
             "table_name":"text",
             "score":"integer",
-            "min_score_professor":"integer"
+            "min_score_professor":"integer",
+            "min_score_for_non_phd_holders":"integer"
         }
     }
     $schema$::jsonb;
