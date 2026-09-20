@@ -289,7 +289,12 @@ class viewProfiles:
     def heading(self,title,style,width):
         line=Table([[""]],colWidths=[width],rowHeights=[2])
         line.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#0F766E"))]))
-        return [Spacer(1,7),self.p(title.upper(),style),line,Spacer(1,8)]
+        return [Spacer(1,14),self.p(title.upper(),style),Spacer(1,3),line,Spacer(1,12)]
+
+    def activityHeading(self,title,style,width):
+        line=Table([[""]],colWidths=[width],rowHeights=[1.2])
+        line.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#64748B"))]))
+        return [Spacer(1,16),self.p(title,style),Spacer(1,3),line,Spacer(1,10)]
 
     def _tableStyles(self,styles=None):
         styles=styles or getSampleStyleSheet()
@@ -457,14 +462,16 @@ class viewProfiles:
             for title_name,table in valid:
                 displayed.add(table);score=all_scores[table]
                 score_table=self.makeTable([["Total Achieved","Approved","Maximum","Considered","Minimum"],[f"{score['total_score_achieved']:.2f}",f"{score['score_approved']:.2f}",f"{score['max_score']:.2f}",f"{score['score_considered']:.2f}",f"{score.get('minimum_required',0):.2f}"]],[width/5]*5,True,16,14)
-                story.append(KeepTogether([self.p(title_name,activity),score_table,Spacer(1,7)]))
+                story += self.activityHeading(title_name,activity,width)
+                story.append(score_table)
+                story.append(Spacer(1,9))
                 df=all_dataframes.get(table,pd.DataFrame())
 
                 if df.empty:story.append(self.p("No score-eligible records present.",normal))
                 else:
                     for flowable in self.pdfDataTables(df,width,normal):story.append(flowable)
 
-                story.append(Spacer(1,14))
+                story.append(Spacer(1,24))
 
         doc.build(story,onFirstPage=self.pageBorder,onLaterPages=self.pageBorder)
         buffer.seek(0)
