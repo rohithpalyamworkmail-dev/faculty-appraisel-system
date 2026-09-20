@@ -167,7 +167,7 @@ class projectGuidance:
                         st.write(f"**Granted:** {is_granted}")
                         st.write(f"**Patent Certificate URL:** {proof_certificate_url}")
 
-                    if st.toggle("Add Entry",key="project_guidance_add"):
+                    if st.button("Add Entry",key="project_guidance_add",type="secondary",width="stretch"):
                         exists=self.checkDocument(batches,student_roll_numbers,project_title,is_conference,is_journal,is_patent,paper_proof,scopus_proof,is_published,is_granted,proof_certificate_url)
                         if exists:st.warning("Record Already Exists.")
                         else:
