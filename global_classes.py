@@ -226,52 +226,107 @@ def get_or_create_db(db_name,type):
 
     return False
 
+def get_departments():
+    """Return all departments currently registered in Supabase."""
+
+    try:
+        response=get_supabase().rpc(
+            "list_departments"
+        ).execute()
+
+        rows=response.data or []
+
+        departments=[]
+
+        for row in rows:
+
+            if isinstance(row,dict):
+                name=row.get("department")
+            else:
+                name=str(row)
+
+            if name:
+                name=str(name).strip()
+
+                if name:
+                    departments.append(name)
+
+        return sorted(set(departments))
+
+    except Exception as e:
+
+        st.error(
+            f"Department List Error: {e}"
+        )
+
+        return []
 
 def delete_db(db_name):
+    """Delete all data belonging to one department."""
+
     if not db_name:
         return "Please Select A Department"
 
-    errors=[]
+    db_name=str(db_name).strip()
 
-    for table in DEPARTMENT_TABLES:
-        try:
-            delete_rows(
-                table,
-                {
-                    "department":db_name
-                }
-            )
-
-        except Exception as e:
-            errors.append(
-                f"{table}: {e}"
-            )
+    if not db_name:
+        return "Please Select A Department"
 
     try:
-        delete_rows(
-            "departments_registry",
+
+        response=get_supabase().rpc(
+            "delete_department",
             {
-                "department":db_name
+                "p_department":db_name
             }
+        ).execute()
+
+        result=response.data
+
+        # Remove the department from the local schema cache
+        _SCHEMA_READY.discard(db_name)
+
+        if isinstance(result,dict):
+
+            if result.get("success") is False:
+
+                return result.get(
+                    "message",
+                    f"Unable To Delete Department {db_name}"
+                )
+
+            tables_cleared=result.get(
+                "tables_cleared",
+                0
+            )
+
+            dynamic_tables_dropped=result.get(
+                "dynamic_tables_dropped",
+                0
+            )
+
+            rows_deleted=result.get(
+                "rows_deleted",
+                0
+            )
+
+            return (
+                f"Department {db_name} Data Successfully Removed. "
+                f"Rows deleted: {rows_deleted}; "
+                f"Static tables cleared: {tables_cleared}; "
+                f"Dynamic tables dropped: {dynamic_tables_dropped}."
+            )
+
+        return (
+            f"Department {db_name} "
+            f"Data Successfully Removed"
         )
 
     except Exception as e:
-        errors.append(
-            f"departments_registry: {e}"
-        )
 
-    _SCHEMA_READY.discard(db_name)
-
-    if errors:
         return (
-            "Department Data Removal Incomplete: "
-            +" | ".join(errors)
+            f"Department Deletion Failed: {e}"
         )
-
-    return (
-        f"Department {db_name} Data Successfully Removed"
-    )
-
 
 def create_table(connection,table_name,fields):
     try:
