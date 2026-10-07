@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from global_fields import department,tables_list,tables_fields,batches
-from global_classes import get_or_create_db,delete_db,create_table,addAllRows,deleteAllRows,displayRows,select_students,delete_students
+from global_classes import get_or_create_db, get_departments, delete_db, create_table, addAllRows, deleteAllRows, displayRows, select_students, delete_students
 from database import get_rows,get_one,upsert_rows
 from supabase_client import supabase
 
