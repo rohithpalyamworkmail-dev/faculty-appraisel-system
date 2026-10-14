@@ -103,12 +103,14 @@ class studentsFeedback:
                             subject_df=semester_df[semester_df["subject_type"]==subject_type]
                             subject=st.pills("Select Subject",subject_df["subject_name"].dropna().unique().tolist(),selection_mode="single",wrap=True)
 
-                            if st.toggle("Check",key="students_feedback_check"):
+                            if semester and subject_type and subject:
                                 if not subject:st.warning("Please select a subject.")
                                 else:
                                     proceed=self.checkDocument(semester,subject_type,subject)
                                     if proceed:st.success("Subject assignment verified.")
                                     else:st.error("You are not assigned to this subject.")
+                        else:
+                            st.info("Select All The Fields")
 
             with col2:
                 if proceed:
