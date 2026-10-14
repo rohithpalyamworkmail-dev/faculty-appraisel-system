@@ -69,7 +69,7 @@ class obePractice:
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
 
-                if st.toggle("Check",key="obe_practice_check"):
+                if practice_type and description and proof_url:
                     if not practice_type:st.warning("Please select a Practice Type.")
                     elif not description:st.warning("Please enter the Description.")
                     elif not proof_url:st.warning("Please enter the Proof URL.")
