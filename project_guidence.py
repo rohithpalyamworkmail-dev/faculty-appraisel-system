@@ -138,7 +138,7 @@ class projectGuidance:
                     elif patent_status=="Granted":is_published="no";is_granted="yes"
                     proof_certificate_url=st.text_input("Patent Certificate URL")
 
-                if st.toggle("Check",key="project_guidance_check"):
+                if selected_batches and selected_students and project_title and project_type and proof_certificate_url:
                     if not selected_batches:st.warning("Please select at least one Batch.")
                     elif not selected_students:st.warning("Please select at least one Student Roll Number.")
                     elif not project_title:st.warning("Please enter Project Title.")
