@@ -114,8 +114,8 @@ class academicResults:
                             proceed=self.checkDocument(semister,subject_type,subject,selected_sections)
                             if proceed:st.success("Subject assignment verified.")
                             else:st.error("Selected subject and sections are not assigned to you.")
-                    else:
-                        st.info("Kindly Select All The Fields Present, No Optional Fields Are Present",key="one")
+                else:
+                    st.info("Kindly Select All The Fields Present, No Optional Fields Are Present")
 
             with col2:
                 if subject_type and selected_sections and subject and proceed:
