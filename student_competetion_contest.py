@@ -105,7 +105,7 @@ class studentCompetetionContest:
                 team_name=st.text_input("Team Name")
                 proof_url=st.text_input("Proof URL")
 
-                if st.toggle("Check",key="student_competetion_check"):
+                if selected_batch and selected_students and result and prize_position and participated_in and participation_type and team_name and proof_url:
                     if not selected_batch:st.warning("Please select a Batch.")
                     elif not selected_students:st.warning("Please select at least one Student.")
                     elif not result:st.warning("Please select the Result.")
