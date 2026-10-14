@@ -107,13 +107,15 @@ class academicResults:
                     if selected_sections:selected_sections=",".join(selected_sections)
                     subject=st.pills("Select Subject",subject_df["subject_name"].dropna().unique().tolist(),selection_mode="single",wrap=True)
 
-                    if st.toggle("Check",key="academic_results_check"):
+                    if semister and subject_type and selected_sections and subject:
                         if not selected_sections:st.warning("Please select at least one section.")
                         elif not subject:st.warning("Please select a subject.")
                         else:
                             proceed=self.checkDocument(semister,subject_type,subject,selected_sections)
                             if proceed:st.success("Subject assignment verified.")
                             else:st.error("Selected subject and sections are not assigned to you.")
+                    else:
+                        st.info("Kindly Select All The Fields Present, No Optional Fields Are Present",key="one")
 
             with col2:
                 if subject_type and selected_sections and subject and proceed:
