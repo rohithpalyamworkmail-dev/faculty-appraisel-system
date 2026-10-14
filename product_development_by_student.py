@@ -83,7 +83,7 @@ class productDevelopmentByStudent:
                 product_description=st.text_area("Product Description")
                 proof_url=st.text_input("Proof URL")
 
-                if st.toggle("Check",key="product_development_check"):
+                if selected_batch and selected_students and team_name and product_name and product_description and proof_url:
                     if not selected_batch:st.warning("Please select a Batch.")
                     elif not selected_students:st.warning("Please select at least one Student.")
                     elif not team_name:st.warning("Please enter the Team Name.")
