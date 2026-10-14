@@ -80,7 +80,7 @@ class innovationInTeaching:
                     innovation=st.text_area("Innovation")
                     proof_url=st.text_input("Proof URL")
 
-                    if st.toggle("Check",key="innovation_in_teaching_check"):
+                    if subject_type and problems_faced and innovation and proof_url:
                         if not subject_type:st.warning("Please select a Subject Type.")
                         elif not problems_faced:st.warning("Please enter the Problems Faced.")
                         elif not innovation:st.warning("Please enter the Innovation.")
