@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
@@ -94,14 +95,15 @@ class competetiveExaminations:
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
 
-                if st.toggle("Check",key="competitive_examinations_check"):
-                    if not selected_batch:st.warning("Please select a Batch.")
-                    elif not selected_students:st.warning("Please select at least one Student.")
-                    elif not exam_name:st.warning("Please enter Exam Name.")
-                    elif not result:st.warning("Please select Result.")
-                    elif not description:st.warning("Please enter Description.")
-                    elif not proof_url:st.warning("Please enter Proof URL.")
-                    else:proceed=True;st.success("Details verified.")
+                if not selected_batch:st.warning("Please select a Batch.")
+                elif not selected_students:st.warning("Please select at least one Student.")
+                elif not exam_name.strip():st.warning("Please enter Exam Name.")
+                elif not result:st.warning("Please select Result.")
+                elif not description.strip():st.warning("Please enter Description.")
+                elif not proof_url.strip():st.warning("Please enter Proof URL.")
+                else:
+                    proceed=True
+                    st.success("Details verified.")
 
             with col2:
                 if proceed:
