@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
@@ -98,14 +99,15 @@ class collaborations:
                     funding=False
                     st.info("Funding is automatically set to 0 for MoU.")
 
-                if st.toggle("Check",key="collaborations_check"):
-                    if not colloboration_type:st.warning("Please select Collaboration Type.")
-                    elif not colloboration_name:st.warning("Please enter Collaboration Name.")
-                    elif not colloboration_with:st.warning("Please select Collaboration With.")
-                    elif not organization_name:st.warning("Please enter Organization Name.")
-                    elif not description:st.warning("Please enter Description.")
-                    elif not proof_url:st.warning("Please enter Proof URL.")
-                    else:proceed=True;st.success("Collaboration details verified.")
+                if not colloboration_type:st.warning("Please select Collaboration Type.")
+                elif not colloboration_name.strip():st.warning("Please enter Collaboration Name.")
+                elif not colloboration_with:st.warning("Please select Collaboration With.")
+                elif not organization_name.strip():st.warning("Please enter Organization Name.")
+                elif not description.strip():st.warning("Please enter Description.")
+                elif not proof_url.strip():st.warning("Please enter Proof URL.")
+                else:
+                    proceed=True
+                    st.success("Collaboration details verified.")
 
             with col2:
                 if proceed:
