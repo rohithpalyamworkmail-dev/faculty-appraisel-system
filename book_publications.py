@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
@@ -29,10 +30,10 @@ class bookPublications:
             config={"book_name":"Book Name","book_category":st.column_config.SelectboxColumn("Book Category",options=["Group1","Group2","Other"],required=True),"publisher_name":"Publisher Name","published_year":st.column_config.NumberColumn("Published Year",min_value=1900,step=1,required=True),"author_type":st.column_config.SelectboxColumn("Author Type",options=["Author","Co-Author"],required=True),"proof_url":st.column_config.LinkColumn("Proof URL"),"description":"Description","awarded_credits":"Awarded Credits"}
             edited_df=st.data_editor(df,num_rows="delete",use_container_width=True,hide_index=True,disabled=["awarded_credits"],column_config=config,key="book_publications_editor")
 
-            if st.toggle("Update",key="book_publications_update"):
-                edited_df["published_year"]=edited_df["published_year"].fillna(1900).astype(int)
-                edited_df["awarded_credits"]=edited_df.apply(lambda row:self.calculateCredits(row["book_category"],row["author_type"]),axis=1)
+            edited_df["published_year"]=edited_df["published_year"].fillna(1900).astype(int)
+            edited_df["awarded_credits"]=edited_df.apply(lambda row:self.calculateCredits(row["book_category"],row["author_type"]),axis=1)
 
+            if not edited_df.equals(df):
                 if self.db.replace_pending(edited_df):st.success("Book Publication Entries Updated Successfully.")
                 else:st.warning("Book Publication Entries Could Not Be Updated.")
         except Exception as e:
@@ -82,15 +83,16 @@ class bookPublications:
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
 
-                if st.toggle("Check",key="book_publications_check"):
-                    if not book_name:st.warning("Please enter Book Name.")
-                    elif not book_category:st.warning("Please select Book Category.")
-                    elif not publisher_name:st.warning("Please enter Publisher Name.")
-                    elif not published_year:st.warning("Please enter Published Year.")
-                    elif not author_type:st.warning("Please select Author Type.")
-                    elif not description:st.warning("Please enter Description.")
-                    elif not proof_url:st.warning("Please enter Proof URL.")
-                    else:proceed=True;st.success("Book publication details verified.")
+                if not book_name.strip():st.warning("Please enter Book Name.")
+                elif not book_category:st.warning("Please select Book Category.")
+                elif not publisher_name.strip():st.warning("Please enter Publisher Name.")
+                elif published_year<1900:st.warning("Please enter a valid Published Year.")
+                elif not author_type:st.warning("Please select Author Type.")
+                elif not description.strip():st.warning("Please enter Description.")
+                elif not proof_url.strip():st.warning("Please enter Proof URL.")
+                else:
+                    proceed=True
+                    st.success("Book publication details verified.")
 
             with col2:
                 if proceed:
