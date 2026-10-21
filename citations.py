@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
@@ -72,12 +73,13 @@ class citationImpacts:
                 description=st.text_area("Description")
                 proof_url=st.text_input("Proof URL")
 
-                if st.toggle("Check",key="citation_impacts_check"):
-                    if not paper_name:st.warning("Please enter Paper Name.")
-                    elif number_of_citations<0:st.warning("Number Of Citations cannot be negative.")
-                    elif not description:st.warning("Please enter Description.")
-                    elif not proof_url:st.warning("Please enter Proof URL.")
-                    else:proceed=True;st.success("Citation details verified.")
+                if not paper_name.strip():st.warning("Please enter Paper Name.")
+                elif number_of_citations<0:st.warning("Number Of Citations cannot be negative.")
+                elif not description.strip():st.warning("Please enter Description.")
+                elif not proof_url.strip():st.warning("Please enter Proof URL.")
+                else:
+                    proceed=True
+                    st.success("Citation details verified.")
 
             with col2:
                 if proceed:
