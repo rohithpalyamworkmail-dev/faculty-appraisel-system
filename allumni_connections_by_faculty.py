@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
@@ -23,21 +24,16 @@ class alumni:
     def getStudents(self,selected_batches=None):
         try:
             if not selected_batches:return []
-
             alumni_rows=get_rows("alumni",{"department":st.session_state["department"]},"student_roll_number,student_batch")
             alumni_rows=[row for row in alumni_rows if row.get("student_batch") in selected_batches]
-
             if not alumni_rows:return []
-
             student_rows=get_rows("students",{"department":st.session_state["department"]},"student_name,student_roll_number")
             student_names={str(row.get("student_roll_number")):row.get("student_name") for row in student_rows}
-
             result=[]
             for row in alumni_rows:
                 roll=str(row.get("student_roll_number",""))
                 name=student_names.get(roll)
                 result.append(f"{name}-{roll}" if name else roll)
-
             return list(dict.fromkeys(result))
         except Exception as e:
             st.error(f"Alumni Fetch Error: {e}")
@@ -54,10 +50,8 @@ class alumni:
     def duplicateEntryCheck(self,activity_type,batch,students,title,description,proof_url):
         try:
             rows=self.db.rows("type,batch,student_name_roll_numbers,title,description,proof_url",{"type":activity_type})
-
             for row in rows:
                 if row.get("batch")==batch and row.get("student_name_roll_numbers")==students and row.get("title")==title and row.get("description")==description and row.get("proof_url")==proof_url:return True
-
             return False
         except Exception as e:
             st.error(f"Duplicate Entry Check Error: {e}")
@@ -81,14 +75,12 @@ class alumni:
     def edit_document(self):
         try:
             df=self.db.editable_dataframe("type,batch,student_name_roll_numbers,title,description,proof_url,credits")
-
             if df.empty:
                 st.info("No Alumni Connection entries are available for editing.")
                 return
 
             batches=self.getBatches()
             all_students=self.getStudents(batches)
-
             df["batch"]=df["batch"].apply(self._to_list)
             df["student_name_roll_numbers"]=df["student_name_roll_numbers"].apply(self._to_list)
 
@@ -97,15 +89,12 @@ class alumni:
 
             if st.toggle("Update",key="alumni_connection_update"):
                 rows=[]
-
                 for _,row in edited_df.iterrows():
                     selected_batches=self._to_list(row["batch"])
                     selected_students=self._to_list(row["student_name_roll_numbers"])
-
                     if not selected_batches or not selected_students:
                         st.warning("Every entry must contain at least one Batch and one Alumni.")
                         return
-
                     rows.append({"type":row["type"],"batch":",".join(selected_batches),"student_name_roll_numbers":",".join(selected_students),"title":row["title"],"credits":self.calculateCredits(row["type"],selected_batches),"description":row["description"],"proof_url":row["proof_url"]})
 
                 if self.db.replace_pending(pd.DataFrame(rows)):st.success("Alumni Connection Entries Updated Successfully.")
@@ -116,13 +105,11 @@ class alumni:
     def viewDocuments(self):
         try:
             df=self.db.dataframe("type,batch,student_name_roll_numbers,title,credits,description,proof_url,hod_approval,admin_approval")
-
             if df.empty:
                 st.info("No Alumni Connection Entries Found.")
                 return
 
             st.subheader("Alumni Connection")
-
             for _,row in df.iterrows():
                 with st.container(border=True):
                     st.subheader(str(row["title"]),divider=True,text_alignment="center")
@@ -131,7 +118,6 @@ class alumni:
                     st.write(f"**Alumni:** {row['student_name_roll_numbers']}")
                     st.write(f"**Description:** {row['description']}")
                     st.write(f"**Proof URL:** {row['proof_url']}")
-
                     col1,col2,col3=st.columns(3)
                     with col1:st.write(f"**Credits:** {row['credits']}")
                     with col2:st.write(f"**HoD Approval:** {row['hod_approval']}")
@@ -166,14 +152,16 @@ class alumni:
                 description=st.text_area("Description",key="alumni_connection_description")
                 proof_url=st.text_input("Proof URL",key="alumni_connection_proof")
 
-                if st.toggle("Check",key="alumni_connection_check"):
-                    if not selected_batches:st.warning("Please Select At Least One Batch.")
-                    elif not selected_students:st.warning("Please Select At Least One Alumni.")
-                    elif not activity_type:st.warning("Please Select Activity Type.")
-                    elif not title:st.warning("Please Enter Title.")
-                    elif not description:st.warning("Please Enter Description.")
-                    elif not proof_url:st.warning("Please Enter Proof URL.")
-                    else:proceed=True;st.success("Alumni Connection Details Verified.")
+                # Check toggle removed; validation runs automatically.
+                if not selected_batches:st.warning("Please Select At Least One Batch.")
+                elif not selected_students:st.warning("Please Select At Least One Alumni.")
+                elif not activity_type:st.warning("Please Select Activity Type.")
+                elif not title.strip():st.warning("Please Enter Title.")
+                elif not description.strip():st.warning("Please Enter Description.")
+                elif not proof_url.strip():st.warning("Please Enter Proof URL.")
+                else:
+                    proceed=True
+                    st.success("Alumni Connection Details Verified.")
 
             with col2:
                 if proceed:
@@ -195,7 +183,6 @@ class alumni:
                             st.warning("Record Already Exists.")
                         else:
                             df=pd.DataFrame([{"type":activity_type,"batch":batches_string,"student_name_roll_numbers":students_string,"title":title,"credits":credits,"description":description,"proof_url":proof_url}])
-
                             if self.insertDocuments(df):st.success("Alumni Connection Entry Added Successfully.")
                             else:st.warning("Alumni Connection Entry Could Not Be Added.")
 
