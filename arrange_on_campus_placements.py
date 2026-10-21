@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
@@ -98,17 +99,19 @@ class arrangingOnCampusRecruitments:
                 is_admin_approved=st.checkbox("Is Admin Approved")
                 proof_url=st.text_input("Proof URL")
 
-                if st.toggle("Check",key="on_campus_recruitments_check"):
-                    if not company_name:st.warning("Please enter Company Name.")
-                    elif not academic_year:st.warning("Please enter Academic Year.")
-                    elif number_of_students_placed<=0:st.warning("Please enter Number Of Students Placed.")
-                    elif highest_package<=0:st.warning("Please enter Highest Package.")
-                    elif average_package<=0:st.warning("Please enter Average Package.")
-                    elif average_package>highest_package:st.warning("Average Package cannot be greater than Highest Package.")
-                    elif not approval_of_principal:st.warning("Principal approval is required.")
-                    elif not approval_of_placement_cell:st.warning("Placement Cell approval is required.")
-                    elif not proof_url:st.warning("Please enter Proof URL.")
-                    else:proceed=True;st.success("Recruitment details verified.")
+                # Check toggle removed; validation runs automatically.
+                if not company_name.strip():st.warning("Please enter Company Name.")
+                elif not academic_year.strip():st.warning("Please enter Academic Year.")
+                elif number_of_students_placed<=0:st.warning("Please enter Number Of Students Placed.")
+                elif highest_package<=0:st.warning("Please enter Highest Package.")
+                elif average_package<=0:st.warning("Please enter Average Package.")
+                elif average_package>highest_package:st.warning("Average Package cannot be greater than Highest Package.")
+                elif not approval_of_principal:st.warning("Principal approval is required.")
+                elif not approval_of_placement_cell:st.warning("Placement Cell approval is required.")
+                elif not proof_url.strip():st.warning("Please enter Proof URL.")
+                else:
+                    proceed=True
+                    st.success("Recruitment details verified.")
 
             with col2:
                 if proceed:
