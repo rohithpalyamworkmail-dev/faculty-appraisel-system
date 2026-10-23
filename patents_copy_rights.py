@@ -167,7 +167,7 @@ class patentCopyRights:
 
                 patent_name = st.text_input("Patent / Copyright Name")
 
-                patent_status = st.pills(
+                patent_status = st.radio(
                     "Patent Status",
                     [
                         "Patent Published",
@@ -178,9 +178,7 @@ class patentCopyRights:
                         "Design Patent Granted Without Institution Name",
                         "Revenue Generated From Patent",
                         "Revenue Generated From Design Patent"
-                    ],
-                    selection_mode="single",
-                    wrap=True
+                    ]
                 )
 
                 description = st.text_area("Description")
