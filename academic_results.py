@@ -105,7 +105,7 @@ class academicResults:
                     subject_df=subjects_df[(subjects_df["subject_semister"]==semister)&(subjects_df["subject_type"]==subject_type)]
                     selected_sections=st.pills("Select Sections",["A","B","C","D","E","F","G"],selection_mode="multi",wrap=True)
                     if selected_sections:selected_sections=",".join(selected_sections)
-                    subject=st.pills("Select Subject",subject_df["subject_name"].dropna().unique().tolist(),selection_mode="single",wrap=True)
+                    subject=st.radio("Select Subject",subject_df["subject_name"].dropna().unique().tolist(),selection_mode="single")
 
                     if semister and subject_type and selected_sections and subject:
                         if not selected_sections:st.warning("Please select at least one section.")
