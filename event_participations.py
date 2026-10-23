@@ -162,11 +162,9 @@ class eventParticipations:
 
                 event_name = st.text_input("Event Name")
 
-                event_type = st.pills(
+                event_type = st.radio(
                     "Event Type",
-                    self.event_types,
-                    selection_mode="single",
-                    wrap=True
+                    self.event_types
                 )
 
                 number_of_days = st.number_input(
