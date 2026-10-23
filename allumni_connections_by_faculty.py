@@ -147,7 +147,7 @@ class alumni:
                     student_options=self.getStudents(selected_batches)
                     selected_students=st.multiselect("Select Alumni",student_options,key="alumni_connection_students")
 
-                activity_type=st.pills("Select Type",self.types,selection_mode="single",key="alumni_connection_type",wrap=True)
+                activity_type=st.radio("Select Type",self.types,key="alumni_connection_type")
                 title=st.text_input("Title",key="alumni_connection_title")
                 description=st.text_area("Description",key="alumni_connection_description")
                 proof_url=st.text_input("Proof URL",key="alumni_connection_proof")
