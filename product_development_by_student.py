@@ -1,7 +1,9 @@
-
 import pandas as pd
 import streamlit as st
+
 from activity_database import ActivityDatabase
+from database import get_rows
+from global_fields import batches as GLOBAL_BATCHES
 
 
 class productDevelopmentByStudent:
@@ -9,20 +11,100 @@ class productDevelopmentByStudent:
         self.db = ActivityDatabase("product_development_by_student")
 
     def getStudentOptions(self, batch=None):
-        mentees = st.session_state.get("mentees_list", pd.DataFrame())
+        """
+        Fetch all students belonging to the logged-in department.
+        Optionally filter them by the selected batch.
+        The faculty's mentee list is intentionally not used.
+        """
+        department = st.session_state.get("department")
 
-        if mentees.empty:
+        if not department or not batch:
             return []
 
-        if batch is not None:
-            mentees = mentees[
-                mentees["student_batch"].astype(str) == str(batch)
+        try:
+            students = get_rows(
+                "students",
+                {"department": department},
+                "student_name,student_roll_number,stuent_batch"
+            )
+
+            if not students:
+                return []
+
+            students_df = pd.DataFrame(students)
+
+            # Support the actual database spelling and a possible
+            # alternative column name.
+            if "stuent_batch" in students_df.columns:
+                batch_column = "stuent_batch"
+            elif "student_batch" in students_df.columns:
+                batch_column = "student_batch"
+            else:
+                st.error(
+                    "The students table does not contain the expected "
+                    "batch column."
+                )
+                return []
+
+            required_columns = [
+                "student_name",
+                "student_roll_number"
             ]
 
-        return [
-            f"{row['student_name']}-{row['student_roll_number']}"
-            for _, row in mentees.iterrows()
-        ]
+            missing_columns = [
+                column
+                for column in required_columns
+                if column not in students_df.columns
+            ]
+
+            if missing_columns:
+                st.error(
+                    "Missing student columns: "
+                    + ", ".join(missing_columns)
+                )
+                return []
+
+            students_df = students_df[
+                students_df[batch_column]
+                .astype(str)
+                .str.strip()
+                == str(batch).strip()
+            ]
+
+            students_df = students_df.dropna(
+                subset=["student_name", "student_roll_number"]
+            )
+
+            students_df["student_name"] = (
+                students_df["student_name"].astype(str).str.strip()
+            )
+
+            students_df["student_roll_number"] = (
+                students_df["student_roll_number"]
+                .astype(str)
+                .str.strip()
+            )
+
+            students_df = students_df[
+                students_df["student_name"].ne("")
+                & students_df["student_roll_number"].ne("")
+            ]
+
+            return (
+                students_df.apply(
+                    lambda row: (
+                        f"{row['student_name']}-"
+                        f"{row['student_roll_number']}"
+                    ),
+                    axis=1
+                )
+                .drop_duplicates()
+                .tolist()
+            )
+
+        except Exception as e:
+            st.error(f"Student Loading Error: {e}")
+            return []
 
     def insertDocuments(self, df):
         df = df.copy()
@@ -45,7 +127,19 @@ class productDevelopmentByStudent:
                 )
                 return
 
-            students = self.getStudentOptions()
+            # Use all centrally configured batches.
+            all_batches = [
+                str(batch) for batch in GLOBAL_BATCHES
+            ]
+
+            # Include students from every configured batch.
+            students = list(
+                dict.fromkeys(
+                    student
+                    for batch in all_batches
+                    for student in self.getStudentOptions(batch)
+                )
+            )
 
             df["students_names_roll_numbers"] = (
                 df["students_names_roll_numbers"]
@@ -66,11 +160,25 @@ class productDevelopmentByStudent:
                         options=students,
                         required=True
                     ),
-                "team_name": "Team Name",
-                "product_name": "Product Name",
-                "product_description": "Product Description",
-                "proof_url": "Proof URL",
-                "awarded_credits": "Awarded Credits"
+                "team_name": st.column_config.TextColumn(
+                    "Team Name",
+                    required=True
+                ),
+                "product_name": st.column_config.TextColumn(
+                    "Product Name",
+                    required=True
+                ),
+                "product_description": st.column_config.TextColumn(
+                    "Product Description",
+                    required=True
+                ),
+                "proof_url": st.column_config.TextColumn(
+                    "Proof URL",
+                    required=True
+                ),
+                "awarded_credits": st.column_config.NumberColumn(
+                    "Awarded Credits"
+                )
             }
 
             edited_df = st.data_editor(
@@ -98,9 +206,13 @@ class productDevelopmentByStudent:
                 edited_df["awarded_credits"] = 2
 
                 if self.db.replace_pending(edited_df):
-                    st.success("Product Development Updated Successfully.")
+                    st.success(
+                        "Product Development Updated Successfully."
+                    )
                 else:
-                    st.warning("Product Development Could Not Be Updated.")
+                    st.warning(
+                        "Product Development Could Not Be Updated."
+                    )
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -122,12 +234,15 @@ class productDevelopmentByStudent:
             for _, row in df.iterrows():
                 with st.container(border=True):
                     st.subheader(str(row["product_name"]))
+
                     st.write(
-                        f"**Students:** {row['students_names_roll_numbers']}"
+                        f"**Students:** "
+                        f"{row['students_names_roll_numbers']}"
                     )
                     st.write(f"**Team Name:** {row['team_name']}")
                     st.write(
-                        f"**Product Description:** {row['product_description']}"
+                        f"**Product Description:** "
+                        f"{row['product_description']}"
                     )
                     st.write(f"**Proof URL:** {row['proof_url']}")
 
@@ -135,11 +250,14 @@ class productDevelopmentByStudent:
 
                     with col1:
                         st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
+                            f"**Awarded Credits:** "
+                            f"{row['awarded_credits']}"
                         )
 
                     with col2:
-                        st.write(f"**HoD Approval:** {row['hod_approval']}")
+                        st.write(
+                            f"**HoD Approval:** {row['hod_approval']}"
+                        )
 
                     with col3:
                         st.write(
@@ -164,82 +282,88 @@ class productDevelopmentByStudent:
             with col1:
                 st.subheader("Product Development By Student")
 
-                mentees = st.session_state.get(
-                    "mentees_list", pd.DataFrame()
+                # Batch pills come from global_fields.py.
+                batch_options = [
+                    str(batch) for batch in GLOBAL_BATCHES
+                ]
+
+                selected_batch = st.pills(
+                    "Select Batch",
+                    batch_options,
+                    selection_mode="single",
+                    wrap=True,
+                    key="product_development_batch"
                 )
 
-                if mentees.empty:
+                selected_students = (
+                    st.multiselect(
+                        "Select Students",
+                        self.getStudentOptions(selected_batch),
+                        key="product_development_students"
+                    )
+                    if selected_batch
+                    else []
+                )
+
+                team_name = st.text_input("Team Name")
+                product_name = st.text_input("Product Name")
+
+                product_description = st.text_area(
+                    "Product Description"
+                )
+
+                proof_url = st.text_input("Proof URL")
+
+                # Validate all required fields.
+                proceed = all([
+                    bool(selected_batch),
+                    bool(selected_students),
+                    bool(team_name.strip()),
+                    bool(product_name.strip()),
+                    bool(product_description.strip()),
+                    bool(proof_url.strip())
+                ])
+
+                if not selected_batch:
+                    st.warning("Please select a Batch.")
+
+                elif not selected_students:
                     st.warning(
-                        "No mentees are assigned to this faculty."
-                    )
-                else:
-                    batches = (
-                        mentees["student_batch"]
-                        .dropna()
-                        .astype(str)
-                        .unique()
-                        .tolist()
+                        "Please select at least one Student."
                     )
 
-                    selected_batch = st.pills(
-                        "Select Batch",
-                        batches,
-                        selection_mode="single",
-                        wrap=True
+                elif not team_name.strip():
+                    st.warning("Please enter the Team Name.")
+
+                elif not product_name.strip():
+                    st.warning("Please enter the Product Name.")
+
+                elif not product_description.strip():
+                    st.warning(
+                        "Please enter the Product Description."
                     )
 
-                    selected_students = (
-                        st.multiselect(
-                            "Select Students",
-                            self.getStudentOptions(selected_batch)
-                        )
-                        if selected_batch
-                        else []
-                    )
-
-                    team_name = st.text_input("Team Name")
-                    product_name = st.text_input("Product Name")
-                    product_description = st.text_area(
-                        "Product Description"
-                    )
-                    proof_url = st.text_input("Proof URL")
-
-                    # Automatically validate all required fields.
-                    proceed = all([
-                        selected_batch,
-                        selected_students,
-                        team_name.strip(),
-                        product_name.strip(),
-                        product_description.strip(),
-                        proof_url.strip()
-                    ])
-
-                    if not selected_batch:
-                        st.warning("Please select a Batch.")
-                    elif not selected_students:
-                        st.warning("Please select at least one Student.")
-                    elif not team_name.strip():
-                        st.warning("Please enter the Team Name.")
-                    elif not product_name.strip():
-                        st.warning("Please enter the Product Name.")
-                    elif not product_description.strip():
-                        st.warning("Please enter the Product Description.")
-                    elif not proof_url.strip():
-                        st.warning("Please enter the Proof URL.")
+                elif not proof_url.strip():
+                    st.warning("Please enter the Proof URL.")
 
             with col2:
-                if not mentees.empty and proceed:
+                if selected_batch and proceed:
                     students = ",".join(selected_students)
 
                     st.subheader("Product Development Details")
+
                     st.write(f"**Batch:** {selected_batch}")
                     st.write(f"**Students:** {students}")
                     st.write(f"**Team Name:** {team_name}")
                     st.write(f"**Product Name:** {product_name}")
+
                     st.write(
-                        f"**Product Description:** {product_description}"
+                        f"**Product Description:** "
+                        f"{product_description}"
                     )
+
                     st.write(f"**Proof URL:** {proof_url}")
+
                     st.info("Awarded Credits: 2")
 
                     if st.button(
