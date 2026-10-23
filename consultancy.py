@@ -229,7 +229,7 @@ class consultancy:
                         "Enter Amount", min_value=0.0, step=1000.0
                     )
                     is_greater = st.checkbox(
-                        "Is Amount Greater Than 10 Lakhs"
+                        "Is Amount > 10 Lakhs"
                     )
 
                 elif entry_type == "Research Grants For Workshop Seminar FDP Conference Etc & Projects Received":
