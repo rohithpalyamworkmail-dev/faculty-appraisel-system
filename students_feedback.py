@@ -236,14 +236,12 @@ class studentsFeedback:
                                 semester_df["subject_type"] == subject_type
                             ]
 
-                            subject = st.pills(
+                            subject = st.radio(
                                 "Select Subject",
                                 subject_df["subject_name"]
                                 .dropna()
                                 .unique()
                                 .tolist(),
-                                selection_mode="single",
-                                wrap=True,
                                 key="students_feedback_subject"
                             )
 
