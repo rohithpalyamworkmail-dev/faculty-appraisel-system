@@ -1,7 +1,8 @@
-
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
+from database import get_rows
+from global_fields import batches as GLOBAL_BATCHES
 
 
 class projectGuidance:
@@ -12,25 +13,62 @@ class projectGuidance:
         return True
 
     def getStudents(self, selected_batches=None):
-        mentees = st.session_state.get("mentees_list", pd.DataFrame())
-
-        if mentees.empty:
+        """
+        Return students in the logged-in faculty's department, optionally
+        filtered by the selected batches. This intentionally does not use
+        mentees_list, because project guidance can include any student.
+        """
+        department = st.session_state.get("department")
+        if not department:
             return []
 
-        if selected_batches:
-            mentees = mentees[
-                mentees["student_batch"].astype(str).isin(
-                    [str(x) for x in selected_batches]
-                )
-            ]
+        try:
+            rows = get_rows(
+                "students",
+                {"department": department},
+                "student_roll_number,stuent_batch"
+            )
 
-        return (
-            mentees["student_roll_number"]
-            .dropna()
-            .astype(str)
-            .unique()
-            .tolist()
-        )
+            if not rows:
+                return []
+
+            students_df = pd.DataFrame(rows)
+
+            # Support the actual schema spelling and common dataframe spelling.
+            batch_column = (
+                "stuent_batch"
+                if "stuent_batch" in students_df.columns
+                else "student_batch"
+                if "student_batch" in students_df.columns
+                else None
+            )
+            if batch_column is None or "student_roll_number" not in students_df.columns:
+                st.error(
+                    "Could not find the expected student batch/roll-number "
+                    "columns in the students table."
+                )
+                return []
+
+            if selected_batches:
+                selected = {str(batch).strip() for batch in selected_batches}
+                students_df = students_df[
+                    students_df[batch_column].astype(str).str.strip().isin(selected)
+                ]
+            else:
+                return []
+
+            return (
+                students_df["student_roll_number"]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .loc[lambda s: s.ne("")]
+                .drop_duplicates()
+                .tolist()
+            )
+        except Exception as e:
+            st.error(f"Student Loading Error: {e}")
+            return []
 
     def checkDocument(
         self,
@@ -120,21 +158,9 @@ class projectGuidance:
                 )
                 return
 
-            mentees = st.session_state.get(
-                "mentees_list", pd.DataFrame()
-            )
-
-            all_batches = (
-                mentees["student_batch"]
-                .dropna()
-                .astype(str)
-                .unique()
-                .tolist()
-                if not mentees.empty
-                else []
-            )
-
-            all_students = self.getStudents()
+            # Use the centrally configured batch options from global_fields.py.
+            all_batches = [str(batch) for batch in GLOBAL_BATCHES]
+            all_students = self.getStudents(all_batches)
 
             df["batches"] = (
                 df["batches"]
@@ -339,143 +365,133 @@ class projectGuidance:
             with col1:
                 st.subheader("Project Guidance Entry")
 
-                mentees = st.session_state.get(
-                    "mentees_list", pd.DataFrame()
+                # Batch pills come from global_fields.py, not the faculty mentee list.
+                batch_options = [str(batch) for batch in GLOBAL_BATCHES]
+
+                selected_batches = st.pills(
+                    "Select Batches",
+                    batch_options,
+                    selection_mode="multi",
+                    wrap=True,
+                    width="stretch",
+                    key="project_guidance_batch_pills"
                 )
 
-                if mentees.empty:
-                    st.warning(
-                        "No mentees are assigned to this faculty."
-                    )
-                else:
-                    batch_options = (
-                        mentees["student_batch"]
-                        .dropna()
-                        .astype(str)
-                        .unique()
-                        .tolist()
-                    )
+                available_students = self.getStudents(selected_batches)
 
-                    selected_batches = st.pills(
-                        "Select Batches",
-                        batch_options,
-                        selection_mode="multi",
-                        wrap=True,
-                        width="stretch"
+                selected_students = (
+                    st.multiselect(
+                        "Select Student Roll Numbers",
+                        available_students,
+                        key="project_guidance_student_roll_numbers"
                     )
+                    if selected_batches
+                    else []
+                )
 
-                    selected_students = (
-                        st.multiselect(
-                            "Select Student Roll Numbers",
-                            self.getStudents(selected_batches)
-                        )
-                        if selected_batches
-                        else []
-                    )
+                project_title = st.text_input("Enter Project Title")
 
-                    project_title = st.text_input("Enter Project Title")
+                project_type = st.radio(
+                    "What Type It Is",
+                    ["Conference", "Journal", "Patent"],
+                    horizontal=True,
+                    index=None
+                )
 
-                    project_type = st.radio(
-                        "What Type It Is",
-                        ["Conference", "Journal", "Patent"],
+                is_conference = "no"
+                is_journal = "no"
+                is_patent = "no"
+                paper_proof = "none"
+                scopus_proof = "none"
+                is_published = "none"
+                is_granted = "none"
+                proof_certificate_url = "none"
+                patent_status = None
+
+                if project_type == "Conference":
+                    is_conference = "yes"
+                    paper_proof = st.text_input("Paper Proof URL")
+                    scopus_proof = st.text_input("Scopus Proof URL")
+
+                elif project_type == "Journal":
+                    is_journal = "yes"
+                    paper_proof = st.text_input("Paper Proof URL")
+                    scopus_proof = st.text_input("Scopus Proof URL")
+
+                elif project_type == "Patent":
+                    is_patent = "yes"
+
+                    patent_status = st.radio(
+                        "Is Published Or Granted",
+                        ["Published", "Granted"],
                         horizontal=True,
                         index=None
                     )
 
-                    is_conference = "no"
-                    is_journal = "no"
-                    is_patent = "no"
-                    paper_proof = "none"
-                    scopus_proof = "none"
-                    is_published = "none"
-                    is_granted = "none"
-                    proof_certificate_url = "none"
-                    patent_status = None
+                    if patent_status == "Published":
+                        is_published = "yes"
+                        is_granted = "no"
 
-                    if project_type == "Conference":
-                        is_conference = "yes"
-                        paper_proof = st.text_input("Paper Proof URL")
-                        scopus_proof = st.text_input("Scopus Proof URL")
+                    elif patent_status == "Granted":
+                        is_published = "no"
+                        is_granted = "yes"
 
-                    elif project_type == "Journal":
-                        is_journal = "yes"
-                        paper_proof = st.text_input("Paper Proof URL")
-                        scopus_proof = st.text_input("Scopus Proof URL")
+                    proof_certificate_url = st.text_input(
+                        "Patent Certificate URL"
+                    )
 
-                    elif project_type == "Patent":
-                        is_patent = "yes"
+                # Automatically validate according to project type.
+                proceed = all([
+                    bool(selected_batches),
+                    bool(selected_students),
+                    bool(project_title.strip()),
+                    bool(project_type)
+                ])
 
-                        patent_status = st.radio(
-                            "Is Published Or Granted",
-                            ["Published", "Granted"],
-                            horizontal=True,
-                            index=None
-                        )
-
-                        if patent_status == "Published":
-                            is_published = "yes"
-                            is_granted = "no"
-
-                        elif patent_status == "Granted":
-                            is_published = "no"
-                            is_granted = "yes"
-
-                        proof_certificate_url = st.text_input(
-                            "Patent Certificate URL"
-                        )
-
-                    # Automatically validate according to project type.
+                if proceed and project_type in ["Conference", "Journal"]:
                     proceed = all([
-                        bool(selected_batches),
-                        bool(selected_students),
-                        bool(project_title.strip()),
-                        bool(project_type)
+                        bool(paper_proof.strip()),
+                        bool(scopus_proof.strip())
                     ])
 
-                    if proceed and project_type in ["Conference", "Journal"]:
-                        proceed = all([
-                            bool(paper_proof.strip()),
-                            bool(scopus_proof.strip())
-                        ])
+                elif proceed and project_type == "Patent":
+                    proceed = all([
+                        bool(patent_status),
+                        bool(proof_certificate_url.strip())
+                    ])
 
-                    elif proceed and project_type == "Patent":
-                        proceed = all([
-                            bool(patent_status),
-                            bool(proof_certificate_url.strip())
-                        ])
-
-                    if not selected_batches:
-                        st.warning("Please select at least one Batch.")
-                    elif not selected_students:
-                        st.warning(
-                            "Please select at least one Student Roll Number."
-                        )
-                    elif not project_title.strip():
-                        st.warning("Please enter Project Title.")
-                    elif not project_type:
-                        st.warning("Please select Project Type.")
-                    elif (
-                        project_type in ["Conference", "Journal"]
-                        and not paper_proof.strip()
-                    ):
-                        st.warning("Please enter Paper Proof URL.")
-                    elif (
-                        project_type in ["Conference", "Journal"]
-                        and not scopus_proof.strip()
-                    ):
-                        st.warning("Please enter Scopus Proof URL.")
-                    elif project_type == "Patent" and not patent_status:
-                        st.warning(
-                            "Please select whether Patent is Published or Granted."
-                        )
-                    elif (
-                        project_type == "Patent"
-                        and not proof_certificate_url.strip()
-                    ):
-                        st.warning("Please enter Patent Certificate URL.")
+                if not selected_batches:
+                    st.warning("Please select at least one Batch.")
+                elif not selected_students:
+                    st.warning(
+                        "Please select at least one Student Roll Number."
+                    )
+                elif not project_title.strip():
+                    st.warning("Please enter Project Title.")
+                elif not project_type:
+                    st.warning("Please select Project Type.")
+                elif (
+                    project_type in ["Conference", "Journal"]
+                    and not paper_proof.strip()
+                ):
+                    st.warning("Please enter Paper Proof URL.")
+                elif (
+                    project_type in ["Conference", "Journal"]
+                    and not scopus_proof.strip()
+                ):
+                    st.warning("Please enter Scopus Proof URL.")
+                elif project_type == "Patent" and not patent_status:
+                    st.warning(
+                        "Please select whether Patent is Published or Granted."
+                    )
+                elif (
+                    project_type == "Patent"
+                    and not proof_certificate_url.strip()
+                ):
+                    st.warning("Please enter Patent Certificate URL.")
 
             with col2:
-                if not mentees.empty and proceed:
+                if selected_batches and proceed:
                     batches = ",".join(selected_batches)
                     student_roll_numbers = ",".join(selected_students)
                     credits = 2
