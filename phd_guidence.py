@@ -220,12 +220,9 @@ class phdGuidance:
             with col1:
                 st.subheader("Ph.D Guidance Entry")
 
-                research_type = st.pills(
+                research_type = st.radio(
                     "Research Type",
-                    self.research_types,
-                    selection_mode="single",
-                    width="stretch",
-                    wrap=True
+                    self.research_types
                 )
 
                 external = False
