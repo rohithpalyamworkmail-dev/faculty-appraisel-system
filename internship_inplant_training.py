@@ -21,7 +21,7 @@ class internshipsInplantTraining:
             df = df[df["student_batch"].astype(str) == str(batch)]
 
         return [
-            f"{row['student_name']}-{row['student_roll_number']}"
+            f"{{row['student_roll_number']}"
             for _, row in df.iterrows()
         ]
 
