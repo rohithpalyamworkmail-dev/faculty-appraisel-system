@@ -373,10 +373,9 @@ class publicationsJournalsConference:
 
                 if publication_type == "Journal":
                     journal_name = st.text_input("Journal Name")
-                    issn_number = st.number_input(
+                    issn_number = st.text_input(
                         "ISSN Number",
-                        min_value=0,
-                        step=1
+                        placeholder="XXXX-XXXX"
                     )
                     scopus_indexed = st.checkbox("Scopus Indexed")
 
