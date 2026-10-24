@@ -383,9 +383,9 @@ class publicationsJournalsConference:
                         step=1
                     )
                     if author_position==1:
-                        scopus_indexed = st.checkbox("Scopus Indexed",default=True,disabled=True)
+                        scopus_indexed = st.checkbox("Scopus Indexed",value=True,disabled=True)
                     else:
-                        scopus_indexed = st.checkbox("Scopus Indexed",default=False,disabled=True)
+                        scopus_indexed = st.checkbox("Scopus Indexed",value=False,disabled=True)
                     quartile = st.segmented_control(
                         "Quartile",
                         ["Q1", "Q2", "Q3", "Q4"],
