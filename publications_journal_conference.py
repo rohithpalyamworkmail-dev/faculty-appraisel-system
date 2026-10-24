@@ -414,10 +414,9 @@ class publicationsJournalsConference:
                         "Name Of The Conference"
                     )
 
-                    isbn_number = st.number_input(
+                    isbn_number = st.text_input(
                         "ISBN Number",
-                        min_value=0,
-                        step=1
+                        placeholder="XXXX-XXXX"
                     )
 
                     scopus_indexed = st.checkbox("Scopus Indexed")
@@ -455,7 +454,8 @@ class publicationsJournalsConference:
                     )
 
                     chapter_isbn_issn_number = st.text_input(
-                        "ISBN / ISSN Number"
+                        label="ISBN / ISSN Number",
+                        placeholder="XXXX-XXXX"
                     )
 
                     author_position = st.number_input(
