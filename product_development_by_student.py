@@ -12,9 +12,8 @@ class productDevelopmentByStudent:
 
     def getStudentOptions(self, batch=None):
         """
-        Fetch all students belonging to the logged-in department.
-        Optionally filter them by the selected batch.
-        The faculty's mentee list is intentionally not used.
+        Fetch all students from the selected batch in the logged-in
+        department. Return only student roll numbers, not names.
         """
         department = st.session_state.get("department")
 
@@ -33,8 +32,7 @@ class productDevelopmentByStudent:
 
             students_df = pd.DataFrame(students)
 
-            # Support the actual database spelling and a possible
-            # alternative column name.
+            # Support the database's existing column spelling.
             if "stuent_batch" in students_df.columns:
                 batch_column = "stuent_batch"
             elif "student_batch" in students_df.columns:
@@ -46,24 +44,14 @@ class productDevelopmentByStudent:
                 )
                 return []
 
-            required_columns = [
-                "student_name",
-                "student_roll_number"
-            ]
-
-            missing_columns = [
-                column
-                for column in required_columns
-                if column not in students_df.columns
-            ]
-
-            if missing_columns:
+            if "student_roll_number" not in students_df.columns:
                 st.error(
-                    "Missing student columns: "
-                    + ", ".join(missing_columns)
+                    "The students table does not contain "
+                    "student_roll_number."
                 )
                 return []
 
+            # Filter students by the selected batch.
             students_df = students_df[
                 students_df[batch_column]
                 .astype(str)
@@ -71,33 +59,13 @@ class productDevelopmentByStudent:
                 == str(batch).strip()
             ]
 
-            students_df = students_df.dropna(
-                subset=["student_name", "student_roll_number"]
-            )
-
-            students_df["student_name"] = (
-                students_df["student_name"].astype(str).str.strip()
-            )
-
-            students_df["student_roll_number"] = (
+            # Return unique, non-empty roll numbers only.
+            return (
                 students_df["student_roll_number"]
+                .dropna()
                 .astype(str)
                 .str.strip()
-            )
-
-            students_df = students_df[
-                students_df["student_name"].ne("")
-                & students_df["student_roll_number"].ne("")
-            ]
-
-            return (
-                students_df.apply(
-                    lambda row: (
-                        f"{row['student_name']}-"
-                        f"{row['student_roll_number']}"
-                    ),
-                    axis=1
-                )
+                .loc[lambda values: values.ne("")]
                 .drop_duplicates()
                 .tolist()
             )
@@ -127,28 +95,30 @@ class productDevelopmentByStudent:
                 )
                 return
 
-            # Use all centrally configured batches.
+            # Use batches configured in global_fields.py.
             all_batches = [
                 str(batch) for batch in GLOBAL_BATCHES
             ]
 
-            # Include students from every configured batch.
+            # Collect roll numbers from all configured batches.
             students = list(
                 dict.fromkeys(
-                    student
+                    roll_number
                     for batch in all_batches
-                    for student in self.getStudentOptions(batch)
+                    for roll_number in self.getStudentOptions(batch)
                 )
             )
 
+            # Convert stored comma-separated roll numbers into lists
+            # for the Streamlit multiselect editor.
             df["students_names_roll_numbers"] = (
                 df["students_names_roll_numbers"]
                 .fillna("")
                 .apply(
-                    lambda x: [
-                        i.strip()
-                        for i in str(x).split(",")
-                        if i.strip()
+                    lambda value: [
+                        item.strip()
+                        for item in str(value).split(",")
+                        if item.strip()
                     ]
                 )
             )
@@ -156,7 +126,7 @@ class productDevelopmentByStudent:
             config = {
                 "students_names_roll_numbers":
                     st.column_config.MultiselectColumn(
-                        "Students",
+                        "Student Roll Numbers",
                         options=students,
                         required=True
                     ),
@@ -195,11 +165,13 @@ class productDevelopmentByStudent:
                 "Update",
                 key="product_development_update"
             ):
+                # Convert the selected roll numbers back into the
+                # existing comma-separated database format.
                 edited_df["students_names_roll_numbers"] = (
                     edited_df["students_names_roll_numbers"].apply(
-                        lambda x: ",".join(x)
-                        if isinstance(x, list)
-                        else str(x)
+                        lambda value: ",".join(value)
+                        if isinstance(value, list)
+                        else str(value)
                     )
                 )
 
@@ -236,14 +208,17 @@ class productDevelopmentByStudent:
                     st.subheader(str(row["product_name"]))
 
                     st.write(
-                        f"**Students:** "
+                        f"**Student Roll Numbers:** "
                         f"{row['students_names_roll_numbers']}"
                     )
+
                     st.write(f"**Team Name:** {row['team_name']}")
+
                     st.write(
                         f"**Product Description:** "
                         f"{row['product_description']}"
                     )
+
                     st.write(f"**Proof URL:** {row['proof_url']}")
 
                     col1, col2, col3 = st.columns(3)
@@ -295,10 +270,15 @@ class productDevelopmentByStudent:
                     key="product_development_batch"
                 )
 
+                # Display only roll numbers for the selected batch.
+                available_students = self.getStudentOptions(
+                    selected_batch
+                )
+
                 selected_students = (
                     st.multiselect(
-                        "Select Students",
-                        self.getStudentOptions(selected_batch),
+                        "Select Student Roll Numbers",
+                        available_students,
                         key="product_development_students"
                     )
                     if selected_batch
@@ -306,6 +286,7 @@ class productDevelopmentByStudent:
                 )
 
                 team_name = st.text_input("Team Name")
+
                 product_name = st.text_input("Product Name")
 
                 product_description = st.text_area(
@@ -348,12 +329,15 @@ class productDevelopmentByStudent:
 
             with col2:
                 if selected_batch and proceed:
+                    # Store only the selected roll numbers.
                     students = ",".join(selected_students)
 
                     st.subheader("Product Development Details")
 
                     st.write(f"**Batch:** {selected_batch}")
-                    st.write(f"**Students:** {students}")
+                    st.write(
+                        f"**Student Roll Numbers:** {students}"
+                    )
                     st.write(f"**Team Name:** {team_name}")
                     st.write(f"**Product Name:** {product_name}")
 
