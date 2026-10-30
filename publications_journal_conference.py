@@ -13,6 +13,67 @@ class publicationsJournalsConference:
     def createTable(self):
         return True
 
+    @staticmethod
+    def _to_integer_or_none(value, field_name):
+        """
+        Convert values such as 1900.0 to 1900 before sending them to
+        PostgreSQL INTEGER columns. Empty/NaN values become None.
+        """
+        if value is None:
+            return None
+
+        try:
+            if pd.isna(value):
+                return None
+        except (TypeError, ValueError):
+            pass
+
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"{field_name} must be a whole number. Received: {value!r}"
+            )
+
+        if not numeric_value.is_integer():
+            raise ValueError(
+                f"{field_name} must be a whole number. Received: {value!r}"
+            )
+
+        return int(numeric_value)
+
+    def _normalize_integer_columns(self, dataframe):
+        """
+        Keep integer database columns as Python int/None objects.
+        dtype=object prevents Pandas from converting int + None back to float.
+        """
+        dataframe = dataframe.copy()
+
+        for column in ("author_position", "year_of_publication"):
+            if column in dataframe.columns:
+                values = [
+                    self._to_integer_or_none(value, column)
+                    for value in dataframe[column].tolist()
+                ]
+                dataframe[column] = pd.Series(
+                    values,
+                    index=dataframe.index,
+                    dtype=object
+                )
+
+        if "credits" in dataframe.columns:
+            values = [
+                self._to_integer_or_none(value, "credits")
+                for value in dataframe["credits"].tolist()
+            ]
+            dataframe["credits"] = pd.Series(
+                values,
+                index=dataframe.index,
+                dtype=object
+            )
+
+        return dataframe
+
     def calculateCredits(
         self,
         publication_type,
@@ -122,6 +183,7 @@ class publicationsJournalsConference:
             return False
 
     def insertDocuments(self, df):
+        df = self._normalize_integer_columns(df)
         return self.db.insert(df)
 
     def deleteAllRows(self):
@@ -215,6 +277,20 @@ class publicationsJournalsConference:
             )
 
             if st.toggle("Update", key="publications_update"):
+                # Convert Pandas float values (e.g. 1900.0) to Python integers
+                # before ActivityDatabase sends rows to PostgreSQL.
+                edited_df = self._normalize_integer_columns(edited_df)
+
+                # First author always takes priority. For other positions,
+                # retain Corresponding Author only when that option is selected.
+                edited_df["author_type"] = edited_df.apply(
+                    lambda r: self.getAuthorType(
+                        r["author_position"],
+                        str(r["author_type"]).strip() == "Corresponding Author"
+                    ),
+                    axis=1
+                )
+
                 edited_df["scopus_indexed"] = (
                     edited_df["scopus_indexed"]
                     .apply(lambda x: "yes" if bool(x) else "no")
@@ -230,6 +306,9 @@ class publicationsJournalsConference:
                     ),
                     axis=1
                 )
+
+                # Re-normalize after calculation; preserve integer objects.
+                edited_df = self._normalize_integer_columns(edited_df)
 
                 if self.db.replace_pending(edited_df):
                     st.success("Publication Entries Updated Successfully.")
@@ -666,7 +745,9 @@ class publicationsJournalsConference:
                                 "scopus_indexed": scopus_value,
                                 "quartile": quartile,
                                 "impact_factor_or_snip": impact_factor_or_snip,
-                                "author_position": author_position,
+                                "author_position": self._to_integer_or_none(
+                                    author_position, "author_position"
+                                ),
                                 "author_type": author_type,
                                 "doi_link": doi_link,
                                 "paper_proof_url": paper_proof_url,
@@ -682,7 +763,9 @@ class publicationsJournalsConference:
                                 "chapter_title": chapter_title,
                                 "title_of_the_book": title_of_the_book,
                                 "book_level": book_level,
-                                "year_of_publication": year_of_publication,
+                                "year_of_publication": self._to_integer_or_none(
+                                    year_of_publication, "year_of_publication"
+                                ),
                                 "chapter_isbn_issn_number":
                                     chapter_isbn_issn_number,
                                 "chapter_proof": chapter_proof,
