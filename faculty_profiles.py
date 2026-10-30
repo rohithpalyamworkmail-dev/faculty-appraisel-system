@@ -298,14 +298,14 @@ class viewProfiles:
 
     def _tableStyles(self,styles=None):
         styles=styles or getSampleStyleSheet()
-        header=ParagraphStyle("pdf_table_header",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=16,leading=18,textColor=colors.HexColor("#115E59"),alignment=TA_CENTER,wordWrap="CJK")
+        header=ParagraphStyle("pdf_table_header",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=14,leading=16,textColor=colors.HexColor("#115E59"),alignment=TA_CENTER,wordWrap="CJK")
         body=ParagraphStyle("pdf_table_body",parent=styles["BodyText"],fontName="Helvetica",fontSize=14,leading=17,textColor=colors.HexColor("#0F172A"),alignment=TA_CENTER,wordWrap="CJK")
         body_left=ParagraphStyle("pdf_table_body_left",parent=body,alignment=0)
-        label=ParagraphStyle("pdf_personal_label",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=11,leading=13,textColor=colors.HexColor("#115E59"),wordWrap="CJK")
+        label=ParagraphStyle("pdf_personal_label",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=14,leading=16,textColor=colors.HexColor("#115E59"),wordWrap="CJK")
         value=ParagraphStyle("pdf_personal_value",parent=styles["BodyText"],fontName="Helvetica",fontSize=14,leading=17,textColor=colors.HexColor("#0F172A"),wordWrap="CJK")
         return header,body,body_left,label,value
 
-    def makeTable(self,data,widths=None,header=True,header_font=16,body_font=14,align="CENTER",padding=6):
+    def makeTable(self,data,widths=None,header=True,header_font=14,body_font=14,align="CENTER",padding=6):
         styles=getSampleStyleSheet()
         head=ParagraphStyle(f"mt_head_{header_font}_{align}",parent=styles["BodyText"],fontName="Helvetica-Bold",fontSize=header_font,leading=header_font+2,textColor=colors.HexColor("#115E59"),alignment=TA_CENTER,wordWrap="CJK")
         body=ParagraphStyle(f"mt_body_{body_font}_{align}",parent=styles["BodyText"],fontName="Helvetica",fontSize=body_font,leading=body_font+3,textColor=colors.HexColor("#0F172A"),alignment=TA_CENTER if align=="CENTER" else 0,wordWrap="CJK")
@@ -399,23 +399,45 @@ class viewProfiles:
         page_width,page_height=A4;margin=22;width=page_width-margin*2
         doc=SimpleDocTemplate(buffer,pagesize=A4,leftMargin=margin,rightMargin=margin,topMargin=margin,bottomMargin=26)
         styles=getSampleStyleSheet()
-        title=ParagraphStyle("title",parent=styles["Title"],fontName="Helvetica-Bold",fontSize=22,leading=26,textColor=colors.HexColor("#17365D"),alignment=TA_CENTER)
-        section=ParagraphStyle("section",parent=styles["Heading1"],fontName="Helvetica-Bold",fontSize=18,leading=22,textColor=colors.HexColor("#0F766E"),spaceAfter=4)
-        activity=ParagraphStyle("activity",parent=styles["Heading2"],fontName="Helvetica-Bold",fontSize=18,leading=22,textColor=colors.HexColor("#334155"),spaceBefore=4,spaceAfter=6)
+        title=ParagraphStyle("title",parent=styles["Title"],fontName="Helvetica-Bold",fontSize=16,leading=19,textColor=colors.HexColor("#17365D"),alignment=TA_CENTER)
+        section=ParagraphStyle("section",parent=styles["Heading1"],fontName="Helvetica-Bold",fontSize=16,leading=19,textColor=colors.HexColor("#0F766E"),spaceAfter=4)
+        activity=ParagraphStyle("activity",parent=styles["Heading2"],fontName="Helvetica-Bold",fontSize=16,leading=19,textColor=colors.HexColor("#334155"),spaceBefore=4,spaceAfter=6)
         normal=ParagraphStyle("normal",parent=styles["BodyText"],fontName="Helvetica",fontSize=14,leading=17,textColor=colors.HexColor("#0F172A"),wordWrap="CJK")
         story=[]
 
-        if self.institute_banner.exists():
-            try:
-                banner=Image(str(self.institute_banner));banner._restrictSize(width,46);banner.hAlign="CENTER";story += [banner,Spacer(1,5)]
-            except:pass
-
-        story += [self.p("FACULTY APPRAISAL SYSTEM",title),Spacer(1,8)]
+        academic_year_style=ParagraphStyle(
+            "academic_year_title",
+            parent=styles["Title"],
+            fontName="Helvetica-Bold",
+            fontSize=16,
+            leading=19,
+            textColor=colors.HexColor("#17365D"),
+            alignment=TA_CENTER
+        )
+        story += [
+            self.p("Academic Year 2026-2027", academic_year_style),
+            Spacer(1, 8)
+        ]
 
         if faculty_image:
             try:
-                photo=Image(BytesIO(faculty_image));photo._restrictSize(width,270);photo.hAlign="CENTER";story += [photo,Spacer(1,6)]
-            except:pass
+                photo=Image(BytesIO(faculty_image))
+                photo._restrictSize(width,270)
+                photo.hAlign="CENTER"
+                story += [photo,Spacer(1,6)]
+            except:
+                pass
+
+        if self.institute_banner.exists():
+            try:
+                banner=Image(str(self.institute_banner))
+                banner._restrictSize(width,46)
+                banner.hAlign="CENTER"
+                story += [banner,Spacer(1,5)]
+            except:
+                pass
+
+        story += [self.p("FACULTY APPRAISAL SYSTEM",title),Spacer(1,8)]
 
         story += self.heading("Faculty Personal Details",section,width)
         details=[(key,value) for key,value in faculty_profile.items() if key!="faculty_password"]
@@ -429,22 +451,22 @@ class viewProfiles:
 
         story += self.heading("Category Wise Performance",section,width)
         category_data=[["Category","Total Achieved","Approved","Considered","Maximum"]]+[[category,f"{value['total_score_achieved']:.2f}",f"{value['score_approved']:.2f}",f"{value['score_considered']:.2f}",f"{value['max_score']:.2f}"] for category,value in category_scores.items()]+[["TOTAL",f"{sum(value['total_score_achieved'] for value in category_scores.values()):.2f}",f"{sum(value['score_approved'] for value in category_scores.values()):.2f}",f"{final_score:.2f}","100.00"]]
-        story.append(self.makeTable(category_data,[width*.30,width*.18,width*.17,width*.17,width*.18],True,16,14))
+        story.append(self.makeTable(category_data,[width*.30,width*.18,width*.17,width*.17,width*.18],True,14,14))
 
         story += self.heading("Minimum Requirement",section,width)
         req_data=[["Category","Minimum Required","Score Considered","Satisfied"]]+category_req.values.tolist()+[["TOTAL",f"{requirements['minimum_total_marks']:.2f}",f"{final_score:.2f}","YES" if category_ok else "NO"]]
-        story.append(self.makeTable(req_data,[width*.40,width*.20,width*.20,width*.20],True,16,14))
+        story.append(self.makeTable(req_data,[width*.40,width*.20,width*.20,width*.20],True,14,14))
         story += [Spacer(1,7),self.p(f"Designation: {requirements['designation']} | PhD Holder: {requirements['is_phd_holder']}",normal)]
 
         if not requirements["recognized"]:story += [Spacer(1,5),self.p("Designation is not mapped to a minimum-requirement rule.",normal)]
 
         if not activity_req.empty:
             story += self.heading("Activity Wise Mandatory Minimums",section,width)
-            story.append(self.makeTable([["Activity","Minimum Required","Score Considered","Satisfied"]]+activity_req.values.tolist(),[width*.52,width*.16,width*.16,width*.16],True,16,14))
+            story.append(self.makeTable([["Activity","Minimum Required","Score Considered","Satisfied"]]+activity_req.values.tolist(),[width*.52,width*.16,width*.16,width*.16],True,14,14))
 
         story += self.heading("Final Result",section,width)
         performance=final_score
-        story.append(self.makeTable([["Final Score","Maximum","Performance","Category Minimums","Activity Minimums","Overall"],[f"{final_score:.2f}","100.00",f"{performance:.2f}%","YES" if category_ok else "NO","YES" if activity_ok else "NO","SATISFIED" if overall_ok else "NOT SATISFIED"]],[width/6]*6,True,16,14))
+        story.append(self.makeTable([["Final Score","Maximum","Performance","Category Minimums","Activity Minimums","Overall"],[f"{final_score:.2f}","100.00",f"{performance:.2f}%","YES" if category_ok else "NO","YES" if activity_ok else "NO","SATISFIED" if overall_ok else "NOT SATISFIED"]],[width/6]*6,True,14,14))
         story.append(PageBreak())
 
         story += self.heading("Category Requirement vs Considered Score",section,width)
@@ -461,7 +483,7 @@ class viewProfiles:
 
             for title_name,table in valid:
                 displayed.add(table);score=all_scores[table]
-                score_table=self.makeTable([["Total Achieved","Approved","Maximum","Considered","Minimum"],[f"{score['total_score_achieved']:.2f}",f"{score['score_approved']:.2f}",f"{score['max_score']:.2f}",f"{score['score_considered']:.2f}",f"{score.get('minimum_required',0):.2f}"]],[width/5]*5,True,16,14)
+                score_table=self.makeTable([["Total Achieved","Approved","Maximum","Considered","Minimum"],[f"{score['total_score_achieved']:.2f}",f"{score['score_approved']:.2f}",f"{score['max_score']:.2f}",f"{score['score_considered']:.2f}",f"{score.get('minimum_required',0):.2f}"]],[width/5]*5,True,14,14)
                 story += self.activityHeading(title_name,activity,width)
                 story.append(score_table)
                 story.append(Spacer(1,9))
