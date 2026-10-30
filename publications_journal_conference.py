@@ -18,35 +18,48 @@ class publicationsJournalsConference:
         publication_type,
         scopus_indexed,
         author_type,
+        author_position=None,
         quartile=None
     ):
-        if str(scopus_indexed).lower() != "yes":
+        """
+        Credit rules:
+        - Not Scopus indexed: 0 credits.
+        - Scopus indexed and first author: 2 credits.
+        - Scopus indexed and corresponding author: 2 credits.
+        - Other Scopus-indexed co-authors: 1 credit.
+
+        The same rule is applied to Journals, Conferences and Book Chapters.
+        """
+        if str(scopus_indexed).strip().lower() not in ("yes", "true", "1"):
             return 0
 
-        if publication_type == "Journal":
-            author_credits = {
-                "Q1": 7,
-                "Q2": 6,
-                "Q3": 4,
-                "Q4": 3
-            }
+        try:
+            position = int(author_position) if author_position is not None else 0
+        except (TypeError, ValueError):
+            position = 0
 
-            coauthor_credits = {
-                "Q1": 5,
-                "Q2": 4,
-                "Q3": 3,
-                "Q4": 1.5
-            }
+        if position == 1 or author_type == "Corresponding Author":
+            return 2
 
-            if author_type == "Author":
-                return author_credits.get(quartile, 0)
+        return 1
 
-            return coauthor_credits.get(quartile, 0)
+    def getAuthorType(self, author_position, corresponding_author):
+        """
+        Resolve the value stored in the author_type database column.
+        First author takes priority over the corresponding-author checkbox.
+        """
+        try:
+            position = int(author_position)
+        except (TypeError, ValueError):
+            position = 0
 
-        if publication_type in ["Conference", "Book Chapter"]:
-            return 2 if author_type == "Author" else 1
+        if position == 1:
+            return "Author"
 
-        return 0
+        if bool(corresponding_author):
+            return "Corresponding Author"
+
+        return "Co-Author"
 
     def _value(self, value):
         if value is None:
@@ -162,12 +175,12 @@ class publicationsJournalsConference:
                 ),
                 "author_position": st.column_config.NumberColumn(
                     "Author Position",
-                    min_value=1,
+                    min_value=0,
                     step=1
                 ),
                 "author_type": st.column_config.SelectboxColumn(
                     "Author Type",
-                    options=["Author", "Co-Author"],
+                    options=["Author", "Co-Author", "Corresponding Author"],
                     required=True
                 ),
                 "doi_link": "DOI Link",
@@ -212,6 +225,7 @@ class publicationsJournalsConference:
                         r["publication_type"],
                         r["scopus_indexed"],
                         r["author_type"],
+                        r["author_position"],
                         r["quartile"]
                     ),
                     axis=1
@@ -379,7 +393,7 @@ class publicationsJournalsConference:
                     )
                     author_position = st.number_input(
                         "Author Position",
-                        min_value=1,
+                        min_value=0,
                         step=1
                     )
                     scopus_indexed = st.checkbox("Scopus Indexed")
@@ -396,10 +410,12 @@ class publicationsJournalsConference:
                         step=0.01
                     )
 
-                    author_type = (
-                        "Author"
-                        if st.checkbox("Are You An Author")
-                        else "Co-Author"
+                    corresponding_author = st.checkbox(
+                        "Are You A Corresponding Author"
+                    )
+                    author_type = self.getAuthorType(
+                        author_position,
+                        corresponding_author
                     )
 
                     doi_link = st.text_input("DOI Link")
@@ -422,14 +438,16 @@ class publicationsJournalsConference:
 
                     author_position = st.number_input(
                         "Author Position",
-                        min_value=1,
+                        min_value=0,
                         step=1
                     )
 
-                    author_type = (
-                        "Author"
-                        if st.checkbox("Are You An Author")
-                        else "Co-Author"
+                    corresponding_author = st.checkbox(
+                        "Are You A Corresponding Author"
+                    )
+                    author_type = self.getAuthorType(
+                        author_position,
+                        corresponding_author
                     )
 
                     doi_link = st.text_input("DOI Link")
@@ -459,14 +477,16 @@ class publicationsJournalsConference:
 
                     author_position = st.number_input(
                         "Author Position",
-                        min_value=1,
+                        min_value=0,
                         step=1
                     )
 
-                    author_type = (
-                        "Author"
-                        if st.checkbox("Are You An Author")
-                        else "Co-Author"
+                    corresponding_author = st.checkbox(
+                        "Are You A Corresponding Author"
+                    )
+                    author_type = self.getAuthorType(
+                        author_position,
+                        corresponding_author
                     )
 
                     scopus_indexed = st.checkbox("Scopus Indexed")
@@ -565,6 +585,7 @@ class publicationsJournalsConference:
                         publication_type,
                         scopus_value,
                         author_type,
+                        author_position,
                         quartile
                     )
 
