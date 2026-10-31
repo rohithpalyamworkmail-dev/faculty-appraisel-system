@@ -16,8 +16,9 @@ class publicationsJournalsConference:
     @staticmethod
     def _to_integer_or_none(value, field_name):
         """
-        Convert values such as 1900.0 to 1900 before sending them to
-        PostgreSQL INTEGER columns. Empty/NaN values become None.
+        Convert integer database fields safely.
+        Examples: 1900.0 -> 1900, None/NaN -> None.
+        Fractional values are rejected only for actual INTEGER fields.
         """
         if value is None:
             return None
@@ -44,8 +45,9 @@ class publicationsJournalsConference:
 
     def _normalize_integer_columns(self, dataframe):
         """
-        Keep integer database columns as Python int/None objects.
-        dtype=object prevents Pandas from converting int + None back to float.
+        Normalize only columns whose database type is INTEGER.
+        Do NOT normalize credits here: legacy records may contain 1.5,
+        and credits are recalculated using the current rules before saving.
         """
         dataframe = dataframe.copy()
 
@@ -61,18 +63,56 @@ class publicationsJournalsConference:
                     dtype=object
                 )
 
-        if "credits" in dataframe.columns:
-            values = [
-                self._to_integer_or_none(value, "credits")
-                for value in dataframe["credits"].tolist()
-            ]
-            dataframe["credits"] = pd.Series(
-                values,
-                index=dataframe.index,
-                dtype=object
+        return dataframe
+
+    @staticmethod
+    def _is_missing(value):
+        if value is None:
+            return True
+        try:
+            return bool(pd.isna(value))
+        except (TypeError, ValueError):
+            return False
+
+    def _clean_database_value(self, column, value):
+        """
+        Convert editor values to values accepted by the existing database
+        schema without changing unrelated fields.
+        """
+        if self._is_missing(value):
+            return None
+
+        if column in ("author_position", "year_of_publication"):
+            return self._to_integer_or_none(value, column)
+
+        if column == "scopus_indexed":
+            if isinstance(value, bool):
+                return "yes" if value else "no"
+            return (
+                "yes"
+                if str(value).strip().lower() in ("yes", "true", "1", "y")
+                else "no"
             )
 
-        return dataframe
+        return value
+
+    def _same_value(self, first, second):
+        """
+        Compare old database values and edited values while treating
+        None, NaN, and blank editor cells consistently.
+        """
+        first_missing = self._is_missing(first)
+        second_missing = self._is_missing(second)
+
+        if first_missing and second_missing:
+            return True
+        if first_missing != second_missing:
+            return False
+
+        try:
+            return bool(first == second)
+        except Exception:
+            return str(first) == str(second)
 
     def calculateCredits(
         self,
@@ -191,31 +231,81 @@ class publicationsJournalsConference:
 
     def edit_document(self):
         try:
-            columns = (
-                "publication_type,paper_title,journal_name,issn_number,"
-                "scopus_indexed,quartile,impact_factor_or_snip,"
-                "author_position,author_type,doi_link,paper_proof_url,"
-                "journal_scopus_proof_url,name_of_the_conference,isbn_number,"
-                "chapter_title,title_of_the_book,book_level,"
-                "year_of_publication,chapter_isbn_issn_number,chapter_proof,"
-                "credits"
-            )
-
-            df = self.db.editable_dataframe(columns)
-
-            if df.empty:
+            # Fetch complete pending rows so each database record keeps its ID
+            # and all fields that are not displayed in the editor.
+            original_rows = self.db.editable_rows("*")
+            if not original_rows:
                 st.info("No Publication entries are available for editing.")
                 return
 
-            df["scopus_indexed"] = (
-                df["scopus_indexed"]
-                .fillna("no")
-                .astype(str)
-                .str.lower()
-                .eq("yes")
+            original_by_id = {
+                str(row.get("id")): dict(row)
+                for row in original_rows
+                if row.get("id") is not None
+            }
+
+            if not original_by_id:
+                st.error(
+                    "Publication records do not contain database IDs. "
+                    "Individual safe updates cannot be performed."
+                )
+                return
+
+            columns = [
+                "id",
+                "publication_type",
+                "paper_title",
+                "journal_name",
+                "issn_number",
+                "scopus_indexed",
+                "quartile",
+                "impact_factor_or_snip",
+                "author_position",
+                "author_type",
+                "doi_link",
+                "paper_proof_url",
+                "journal_scopus_proof_url",
+                "name_of_the_conference",
+                "isbn_number",
+                "chapter_title",
+                "title_of_the_book",
+                "book_level",
+                "year_of_publication",
+                "chapter_isbn_issn_number",
+                "chapter_proof",
+                "credits"
+            ]
+
+            # Include only columns available in this database version.
+            available_columns = set().union(
+                *(row.keys() for row in original_by_id.values())
             )
+            visible_columns = [
+                column for column in columns
+                if column == "id" or column in available_columns
+            ]
+
+            df = pd.DataFrame(
+                list(original_by_id.values())
+            )
+            df = df.reindex(columns=visible_columns)
+
+            if "scopus_indexed" in df.columns:
+                df["scopus_indexed"] = (
+                    df["scopus_indexed"]
+                    .fillna("no")
+                    .astype(str)
+                    .str.strip()
+                    .str.lower()
+                    .isin(["yes", "true", "1", "y"])
+                )
+
+            # Older rows may have float-shaped integer values. Normalize only
+            # the actual integer columns; never reject legacy credits like 1.5.
+            df = self._normalize_integer_columns(df)
 
             config = {
+                "id": None,
                 "publication_type": st.column_config.SelectboxColumn(
                     "Publication Type",
                     options=["Journal", "Conference", "Book Chapter"],
@@ -263,7 +353,9 @@ class publicationsJournalsConference:
                 ),
                 "chapter_isbn_issn_number": "ISBN / ISSN Number",
                 "chapter_proof": "Chapter Proof",
-                "credits": "Credits"
+                "credits": st.column_config.NumberColumn(
+                    "Credits"
+                )
             }
 
             edited_df = st.data_editor(
@@ -271,38 +363,208 @@ class publicationsJournalsConference:
                 num_rows="delete",
                 use_container_width=True,
                 hide_index=True,
-                disabled=["credits"],
+                disabled=["id", "credits"],
                 column_config=config,
-                key="publications_editor"
+                key="publications_editor_v2"
             )
 
-            if st.toggle("Update", key="publications_update"):
-                # Convert Pandas float values (e.g. 1900.0) to Python integers
-                # before ActivityDatabase sends rows to PostgreSQL.
-                edited_df = self._normalize_integer_columns(edited_df)
+            # A button performs one update operation. A persistent toggle can
+            # otherwise repeat the database update on every Streamlit rerun.
+            if st.button(
+                "Update",
+                key="publications_update_v2",
+                type="primary",
+                width="stretch"
+            ):
+                edited_df = edited_df.copy()
 
-                # First author always takes priority. For other positions,
-                # retain Corresponding Author only when that option is selected.
-                edited_df["author_type"] = edited_df.apply(
-                    lambda r: self.getAuthorType(
-                        r["author_position"],
-                        str(r["author_type"]).strip() == "Corresponding Author"
-                    ),
-                    axis=1
+                # Keep a stable row identity; never replace the whole table.
+                edited_ids = {
+                    str(value)
+                    for value in edited_df["id"].tolist()
+                    if not self._is_missing(value)
+                }
+
+                original_ids = set(original_by_id.keys())
+                deleted_ids = original_ids - edited_ids
+
+                update_errors = []
+                updated_count = 0
+                deleted_count = 0
+
+                # Update existing records one at a time. Fields absent from the
+                # editor (including approval metadata) are never overwritten.
+                for _, edited_row in edited_df.iterrows():
+                    record_id = str(edited_row.get("id"))
+                    original = original_by_id.get(record_id)
+
+                    if original is None:
+                        update_errors.append(
+                            f"Could not match database record ID {record_id}."
+                        )
+                        continue
+
+                    values = edited_row.to_dict()
+
+                    # Resolve author classification consistently:
+                    # position 1 always means Author; otherwise the selected
+                    # Corresponding Author value is retained, else Co-Author.
+                    try:
+                        author_position = self._to_integer_or_none(
+                            values.get("author_position"),
+                            "author_position"
+                        )
+                    except ValueError as e:
+                        update_errors.append(str(e))
+                        continue
+
+                    selected_author_type = str(
+                        values.get("author_type") or ""
+                    ).strip()
+
+                    author_type = self.getAuthorType(
+                        author_position,
+                        selected_author_type == "Corresponding Author"
+                    )
+
+                    scopus_value = self._clean_database_value(
+                        "scopus_indexed",
+                        values.get("scopus_indexed")
+                    )
+
+                    values["author_position"] = author_position
+                    values["author_type"] = author_type
+                    values["scopus_indexed"] = scopus_value
+
+                    # Recalculate every row's credits, including old records
+                    # whose previous quartile-based credit was fractional.
+                    values["credits"] = self.calculateCredits(
+                        values.get("publication_type"),
+                        scopus_value,
+                        author_type,
+                        author_position,
+                        values.get("quartile")
+                    )
+
+                    # Build a minimal update payload. This is the key safeguard:
+                    # unchanged fields and hidden database fields remain intact.
+                    update_values = {}
+
+                    for column in visible_columns:
+                        if column in ("id", "credits"):
+                            continue
+
+                        new_value = self._clean_database_value(
+                            column,
+                            values.get(column)
+                        )
+                        old_value = original.get(column)
+
+                        if not self._same_value(old_value, new_value):
+                            update_values[column] = new_value
+
+                    # Update credits if the old stored value differs. This
+                    # replaces legacy 1.5 values with the current rule result.
+                    if not self._same_value(
+                        original.get("credits"),
+                        values["credits"]
+                    ):
+                        update_values["credits"] = values["credits"]
+
+                    if update_values:
+                        try:
+                            if self.db.update_by_id(
+                                original.get("id"),
+                                update_values,
+                                approvals=False
+                            ):
+                                updated_count += 1
+                            else:
+                                update_errors.append(
+                                    f"Update failed for record ID {record_id}."
+                                )
+                        except Exception as e:
+                            update_errors.append(
+                                f"Record {record_id}: {e}"
+                            )
+
+                # Delete only rows explicitly removed from the editor.
+                for record_id in deleted_ids:
+                    original = original_by_id[record_id]
+                    try:
+                        if self.db.delete_by_id(original.get("id")):
+                            deleted_count += 1
+                        else:
+                            update_errors.append(
+                                f"Deletion failed for record ID {record_id}."
+                            )
+                    except Exception as e:
+                        update_errors.append(
+                            f"Deletion {record_id}: {e}"
+                        )
+
+                if update_errors:
+                    st.error(
+                        "Some publication changes could not be completed. "
+                        "Successfully processed records were not rolled back."
+                    )
+                    for error in update_errors:
+                        st.write(f"- {error}")
+                else:
+                    st.success(
+                        "Publication entries updated successfully. "
+                        f"Updated: {updated_count} | Deleted: {deleted_count}"
+                    )
+        except Exception as e:
+            st.error(f"Edit Error: {e}")
+
+    def viewDocuments(self):
+        try:
+            columns = (
+                "publication_type,paper_title,journal_name,issn_number,"
+                "scopus_indexed,quartile,impact_factor_or_snip,"
+                "author_position,author_type,doi_link,paper_proof_url,"
+                "journal_scopus_proof_url,name_of_the_conference,isbn_number,"
+                "chapter_title,title_of_the_book,book_level,"
+                "year_of_publication,chapter_isbn_issn_number,chapter_proof,"
+                "credits,hod_approval,admin_approval"
+            )
+
+            df = self.db.dataframe(columns)
+
+            if df.empty:
+                st.info("No Publication entries found.")
+                return
+
+            st.subheader(
+                "Publications - Journals / Conferences / Book Chapters"
+            )
+
+            for _, row in df.iterrows():
+                title = (
+                    row["chapter_title"]
+                    if row["publication_type"] == "Book Chapter"
+                    else row["paper_title"]
                 )
 
-                edited_df["scopus_indexed"] = (
-                    edited_df["scopus_indexed"]
-                    .apply(lambda x: "yes" if bool(x) else "no")
-                )
+                with st.container(border=True):
+                    st.subheader(
+                        str(title),
+                        divider=True,
+                        text_alignment="center"
+                    )
 
-                edited_df["credits"] = edited_df.apply(
-                    lambda r: self.calculateCredits(
-                        r["publication_type"],
-                        r["scopus_indexed"],
-                        r["author_type"],
-                        r["author_position"],
-                        r["quartile"]
+                    st.write(f"**Type:** {row['publication_type']}")
+                    st.write(
+                        f"**Scopus Indexed:** "
+                        f"{str(row['scopus_indexed']).title()}"
+                    )
+                    st.write(f"**Author Type:** {row['author_type']}")
+                    st.write(f"**Author Position:** {row['author_position']}")
+
+                    if row["publication_type"] == "Journal":
+                        st.write(f"**Journal Name:** {row['journal_name']}")
+                        st.write(f"**ISSN Number:** {row['issn_number']}")
                     ),
                     axis=1
                 )
