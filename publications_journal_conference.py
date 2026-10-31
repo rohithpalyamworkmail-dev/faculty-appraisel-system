@@ -565,6 +565,248 @@ class publicationsJournalsConference:
                     if row["publication_type"] == "Journal":
                         st.write(f"**Journal Name:** {row['journal_name']}")
                         st.write(f"**ISSN Number:** {row['issn_number']}")
+                      min_value=0.0
+                ),
+                "author_position": st.column_config.NumberColumn(
+                    "Author Position",
+                    min_value=0,
+                    step=1
+                ),
+                "author_type": st.column_config.SelectboxColumn(
+                    "Author Type",
+                    options=["Author", "Co-Author", "Corresponding Author"],
+                    required=True
+                ),
+                "doi_link": "DOI Link",
+                "paper_proof_url": "Paper Proof URL",
+                "journal_scopus_proof_url": "Journal Scopus Proof URL",
+                "name_of_the_conference": "Conference Name",
+                "isbn_number": "ISBN Number",
+                "chapter_title": "Chapter Title",
+                "title_of_the_book": "Book Title",
+                "book_level": st.column_config.SelectboxColumn(
+                    "National / International",
+                    options=["National", "International"]
+                ),
+                "year_of_publication": st.column_config.NumberColumn(
+                    "Publication Year",
+                    min_value=1900,
+                    step=1
+                ),
+                "chapter_isbn_issn_number": "ISBN / ISSN Number",
+                "chapter_proof": "Chapter Proof",
+                "credits": st.column_config.NumberColumn(
+                    "Credits"
+                )
+            }
+
+            edited_df = st.data_editor(
+                df,
+                num_rows="delete",
+                use_container_width=True,
+                hide_index=True,
+                disabled=["id", "credits"],
+                column_config=config,
+                key="publications_editor_v2"
+            )
+
+            # A button performs one update operation. A persistent toggle can
+            # otherwise repeat the database update on every Streamlit rerun.
+            if st.button(
+                "Update",
+                key="publications_update_v2",
+                type="primary",
+                width="stretch"
+            ):
+                edited_df = edited_df.copy()
+
+                # Keep a stable row identity; never replace the whole table.
+                edited_ids = {
+                    str(value)
+                    for value in edited_df["id"].tolist()
+                    if not self._is_missing(value)
+                }
+
+                original_ids = set(original_by_id.keys())
+                deleted_ids = original_ids - edited_ids
+
+                update_errors = []
+                updated_count = 0
+                deleted_count = 0
+
+                # Update existing records one at a time. Fields absent from the
+                # editor (including approval metadata) are never overwritten.
+                for _, edited_row in edited_df.iterrows():
+                    record_id = str(edited_row.get("id"))
+                    original = original_by_id.get(record_id)
+
+                    if original is None:
+                        update_errors.append(
+                            f"Could not match database record ID {record_id}."
+                        )
+                        continue
+
+                    values = edited_row.to_dict()
+
+                    # Resolve author classification consistently:
+                    # position 1 always means Author; otherwise the selected
+                    # Corresponding Author value is retained, else Co-Author.
+                    try:
+                        author_position = self._to_integer_or_none(
+                            values.get("author_position"),
+                            "author_position"
+                        )
+                    except ValueError as e:
+                        update_errors.append(str(e))
+                        continue
+
+                    selected_author_type = str(
+                        values.get("author_type") or ""
+                    ).strip()
+
+                    author_type = self.getAuthorType(
+                        author_position,
+                        selected_author_type == "Corresponding Author"
+                    )
+
+                    scopus_value = self._clean_database_value(
+                        "scopus_indexed",
+                        values.get("scopus_indexed")
+                    )
+
+                    values["author_position"] = author_position
+                    values["author_type"] = author_type
+                    values["scopus_indexed"] = scopus_value
+
+                    # Recalculate every row's credits, including old records
+                    # whose previous quartile-based credit was fractional.
+                    values["credits"] = self.calculateCredits(
+                        values.get("publication_type"),
+                        scopus_value,
+                        author_type,
+                        author_position,
+                        values.get("quartile")
+                    )
+
+                    # Build a minimal update payload. This is the key safeguard:
+                    # unchanged fields and hidden database fields remain intact.
+                    update_values = {}
+
+                    for column in visible_columns:
+                        if column in ("id", "credits"):
+                            continue
+
+                        new_value = self._clean_database_value(
+                            column,
+                            values.get(column)
+                        )
+                        old_value = original.get(column)
+
+                        if not self._same_value(old_value, new_value):
+                            update_values[column] = new_value
+
+                    # Update credits if the old stored value differs. This
+                    # replaces legacy 1.5 values with the current rule result.
+                    if not self._same_value(
+                        original.get("credits"),
+                        values["credits"]
+                    ):
+                        update_values["credits"] = values["credits"]
+
+                    if update_values:
+                        try:
+                            if self.db.update_by_id(
+                                original.get("id"),
+                                update_values,
+                                approvals=False
+                            ):
+                                updated_count += 1
+                            else:
+                                update_errors.append(
+                                    f"Update failed for record ID {record_id}."
+                                )
+                        except Exception as e:
+                            update_errors.append(
+                                f"Record {record_id}: {e}"
+                            )
+
+                # Delete only rows explicitly removed from the editor.
+                for record_id in deleted_ids:
+                    original = original_by_id[record_id]
+                    try:
+                        if self.db.delete_by_id(original.get("id")):
+                            deleted_count += 1
+                        else:
+                            update_errors.append(
+                                f"Deletion failed for record ID {record_id}."
+                            )
+                    except Exception as e:
+                        update_errors.append(
+                            f"Deletion {record_id}: {e}"
+                        )
+
+                if update_errors:
+                    st.error(
+                        "Some publication changes could not be completed. "
+                        "Successfully processed records were not rolled back."
+                    )
+                    for error in update_errors:
+                        st.write(f"- {error}")
+                else:
+                    st.success(
+                        "Publication entries updated successfully. "
+                        f"Updated: {updated_count} | Deleted: {deleted_count}"
+                    )
+        except Exception as e:
+            st.error(f"Edit Error: {e}")
+
+    def viewDocuments(self):
+        try:
+            columns = (
+                "publication_type,paper_title,journal_name,issn_number,"
+                "scopus_indexed,quartile,impact_factor_or_snip,"
+                "author_position,author_type,doi_link,paper_proof_url,"
+                "journal_scopus_proof_url,name_of_the_conference,isbn_number,"
+                "chapter_title,title_of_the_book,book_level,"
+                "year_of_publication,chapter_isbn_issn_number,chapter_proof,"
+                "credits,hod_approval,admin_approval"
+            )
+
+            df = self.db.dataframe(columns)
+
+            if df.empty:
+                st.info("No Publication entries found.")
+                return
+
+            st.subheader(
+                "Publications - Journals / Conferences / Book Chapters"
+            )
+
+            for _, row in df.iterrows():
+                title = (
+                    row["chapter_title"]
+                    if row["publication_type"] == "Book Chapter"
+                    else row["paper_title"]
+                )
+
+                with st.container(border=True):
+                    st.subheader(
+                        str(title),
+                        divider=True,
+                        text_alignment="center"
+                    )
+
+                    st.write(f"**Type:** {row['publication_type']}")
+                    st.write(
+                        f"**Scopus Indexed:** "
+                        f"{str(row['scopus_indexed']).title()}"
+                    )
+                    st.write(f"**Author Type:** {row['author_type']}")
+                    st.write(f"**Author Position:** {row['author_position']}")
+
+                    if row["publication_type"] == "Journal":
+                        st.write(f"**Journal Name:** {row['journal_name']}")
+                        st.write(f"**ISSN Number:** {row['issn_number']}")
                     ),
                     axis=1
                 )
