@@ -5,114 +5,177 @@ from activity_database import ActivityDatabase
 
 
 class publicationsJournalsConference:
+
+    TABLE_NAME = "publications_conferences_journals_book_chapters"
+
+    PUBLICATION_TYPES = ["Journal", "Conference", "Book Chapter"]
+    AUTHOR_TYPES = ["Author", "Co-Author", "Corresponding Author"]
+    QUARTILES = ["Q1", "Q2", "Q3", "Q4"]
+
+    INTEGER_COLUMNS = ("author_position", "year_of_publication")
+
+    EDIT_COLUMNS = [
+        "id",
+        "publication_type",
+        "paper_title",
+        "journal_name",
+        "issn_number",
+        "scopus_indexed",
+        "quartile",
+        "impact_factor_or_snip",
+        "author_position",
+        "author_type",
+        "doi_link",
+        "paper_proof_url",
+        "journal_scopus_proof_url",
+        "name_of_the_conference",
+        "isbn_number",
+        "chapter_title",
+        "title_of_the_book",
+        "book_level",
+        "year_of_publication",
+        "chapter_isbn_issn_number",
+        "chapter_proof",
+        "credits",
+    ]
+
     def __init__(self):
-        self.db = ActivityDatabase(
-            "publications_conferences_journals_book_chapters"
-        )
+        self.db = ActivityDatabase(self.TABLE_NAME)
 
     def createTable(self):
         return True
 
-    @staticmethod
-    def _to_integer_or_none(value, field_name):
-        """
-        Convert integer database fields safely.
-        Examples: 1900.0 -> 1900, None/NaN -> None.
-        Fractional values are rejected only for actual INTEGER fields.
-        """
-        if value is None:
-            return None
-
-        try:
-            if pd.isna(value):
-                return None
-        except (TypeError, ValueError):
-            pass
-
-        try:
-            numeric_value = float(value)
-        except (TypeError, ValueError):
-            raise ValueError(
-                f"{field_name} must be a whole number. Received: {value!r}"
-            )
-
-        if not numeric_value.is_integer():
-            raise ValueError(
-                f"{field_name} must be a whole number. Received: {value!r}"
-            )
-
-        return int(numeric_value)
-
-    def _normalize_integer_columns(self, dataframe):
-        """
-        Normalize only columns whose database type is INTEGER.
-        Do NOT normalize credits here: legacy records may contain 1.5,
-        and credits are recalculated using the current rules before saving.
-        """
-        dataframe = dataframe.copy()
-
-        for column in ("author_position", "year_of_publication"):
-            if column in dataframe.columns:
-                values = [
-                    self._to_integer_or_none(value, column)
-                    for value in dataframe[column].tolist()
-                ]
-                dataframe[column] = pd.Series(
-                    values,
-                    index=dataframe.index,
-                    dtype=object
-                )
-
-        return dataframe
+    # ==============================================================
+    # VALUE CONVERSION AND VALIDATION
+    # ==============================================================
 
     @staticmethod
     def _is_missing(value):
         if value is None:
             return True
+
         try:
-            return bool(pd.isna(value))
+            result = pd.isna(value)
+            return bool(result) if not hasattr(result, "__len__") else False
         except (TypeError, ValueError):
             return False
 
-    def _clean_database_value(self, column, value):
-        """
-        Convert editor values to values accepted by the existing database
-        schema without changing unrelated fields.
-        """
-        if self._is_missing(value):
+    @classmethod
+    def _to_integer_or_none(cls, value, field_name):
+
+        if cls._is_missing(value) or value == "":
             return None
 
-        if column in ("author_position", "year_of_publication"):
-            return self._to_integer_or_none(value, column)
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"{field_name} must be a whole number. "
+                f"Received: {value!r}"
+            )
+
+        if not number.is_integer():
+            raise ValueError(
+                f"{field_name} must be a whole number. "
+                f"Received: {value!r}"
+            )
+
+        return int(number)
+
+    def _normalize_integer_columns(self, dataframe):
+
+        result = dataframe.copy()
+
+        for column in self.INTEGER_COLUMNS:
+
+            if column in result.columns:
+
+                result[column] = pd.Series(
+                    [
+                        self._to_integer_or_none(value, column)
+                        for value in result[column]
+                    ],
+                    index=result.index,
+                    dtype=object
+                )
+
+        return result
+
+    @classmethod
+    def _db_value(cls, column, value):
+
+        if cls._is_missing(value) or value == "":
+            return None
+
+        if column in cls.INTEGER_COLUMNS:
+            return cls._to_integer_or_none(value, column)
 
         if column == "scopus_indexed":
+
             if isinstance(value, bool):
                 return "yes" if value else "no"
+
             return (
                 "yes"
-                if str(value).strip().lower() in ("yes", "true", "1", "y")
+                if str(value).strip().lower()
+                in {"yes", "true", "1", "y"}
                 else "no"
             )
 
         return value
 
-    def _same_value(self, first, second):
-        """
-        Compare old database values and edited values while treating
-        None, NaN, and blank editor cells consistently.
-        """
-        first_missing = self._is_missing(first)
-        second_missing = self._is_missing(second)
+    @classmethod
+    def _same_value(cls, first, second):
 
-        if first_missing and second_missing:
-            return True
-        if first_missing != second_missing:
-            return False
+        first_missing = cls._is_missing(first) or first == ""
+        second_missing = cls._is_missing(second) or second == ""
+
+        if first_missing or second_missing:
+            return first_missing and second_missing
+
+        if isinstance(first, (int, float)) and isinstance(
+            second, (int, float)
+        ):
+            return float(first) == float(second)
+
+        return str(first).strip() == str(second).strip()
+
+    @staticmethod
+    def _value(value):
+
+        if value is None:
+            return ""
 
         try:
-            return bool(first == second)
-        except Exception:
-            return str(first) == str(second)
+            if pd.isna(value):
+                return ""
+        except (TypeError, ValueError):
+            pass
+
+        return str(value).strip()
+
+    # ==============================================================
+    # AUTHOR TYPE AND CREDIT CALCULATION
+    # ==============================================================
+
+    def getAuthorType(self, author_position, corresponding_author):
+
+        try:
+            position = self._to_integer_or_none(
+                author_position,
+                "author_position"
+            )
+        except ValueError:
+            position = None
+
+        # First author always has priority.
+        if position == 1:
+            return "Author"
+
+        if bool(corresponding_author):
+            return "Corresponding Author"
+
+        return "Co-Author"
 
     def calculateCredits(
         self,
@@ -122,57 +185,34 @@ class publicationsJournalsConference:
         author_position=None,
         quartile=None
     ):
-        """
-        Credit rules:
-        - Not Scopus indexed: 0 credits.
-        - Scopus indexed and first author: 2 credits.
-        - Scopus indexed and corresponding author: 2 credits.
-        - Other Scopus-indexed co-authors: 1 credit.
 
-        The same rule is applied to Journals, Conferences and Book Chapters.
-        """
-        if str(scopus_indexed).strip().lower() not in ("yes", "true", "1"):
+        is_scopus = (
+            str(scopus_indexed).strip().lower()
+            in {"yes", "true", "1", "y"}
+        )
+
+        if not is_scopus:
             return 0
 
         try:
-            position = int(author_position) if author_position is not None else 0
-        except (TypeError, ValueError):
-            position = 0
+            position = self._to_integer_or_none(
+                author_position,
+                "author_position"
+            )
+        except ValueError:
+            position = None
 
-        if position == 1 or author_type == "Corresponding Author":
+        if (
+            position == 1
+            or author_type == "Corresponding Author"
+        ):
             return 2
 
         return 1
 
-    def getAuthorType(self, author_position, corresponding_author):
-        """
-        Resolve the value stored in the author_type database column.
-        First author takes priority over the corresponding-author checkbox.
-        """
-        try:
-            position = int(author_position)
-        except (TypeError, ValueError):
-            position = 0
-
-        if position == 1:
-            return "Author"
-
-        if bool(corresponding_author):
-            return "Corresponding Author"
-
-        return "Co-Author"
-
-    def _value(self, value):
-        if value is None:
-            return ""
-
-        try:
-            if pd.isna(value):
-                return ""
-        except Exception:
-            pass
-
-        return str(value)
+    # ==============================================================
+    # DUPLICATE ENTRY CHECK
+    # ==============================================================
 
     def duplicateEntryCheck(
         self,
@@ -183,7 +223,9 @@ class publicationsJournalsConference:
         chapter_title,
         doi_link
     ):
+
         try:
+
             rows = self.db.rows(
                 "publication_type,paper_title,journal_name,"
                 "name_of_the_conference,chapter_title,doi_link",
@@ -191,26 +233,21 @@ class publicationsJournalsConference:
             )
 
             target = [
-                self._value(x)
-                for x in [
-                    paper_title,
-                    journal_name,
-                    name_of_the_conference,
-                    chapter_title,
-                    doi_link
-                ]
+                self._value(paper_title),
+                self._value(journal_name),
+                self._value(name_of_the_conference),
+                self._value(chapter_title),
+                self._value(doi_link)
             ]
 
             for row in rows:
+
                 current = [
-                    self._value(row.get(x))
-                    for x in [
-                        "paper_title",
-                        "journal_name",
-                        "name_of_the_conference",
-                        "chapter_title",
-                        "doi_link"
-                    ]
+                    self._value(row.get("paper_title")),
+                    self._value(row.get("journal_name")),
+                    self._value(row.get("name_of_the_conference")),
+                    self._value(row.get("chapter_title")),
+                    self._value(row.get("doi_link"))
                 ]
 
                 if current == target:
@@ -222,75 +259,80 @@ class publicationsJournalsConference:
             st.error(f"Duplicate Entry Check Error: {e}")
             return False
 
-    def insertDocuments(self, df):
-        df = self._normalize_integer_columns(df)
-        return self.db.insert(df)
+    # ==============================================================
+    # INSERT AND DELETE OPERATIONS
+    # ==============================================================
+
+    def insertDocuments(self, dataframe):
+
+        try:
+            dataframe = self._normalize_integer_columns(dataframe)
+            return self.db.insert(dataframe)
+
+        except Exception as e:
+            st.error(f"Publication Insert Error: {e}")
+            return False
 
     def deleteAllRows(self):
         return self.db.delete_pending()
 
+    # ==============================================================
+    # EDIT PUBLICATION RECORDS
+    # ==============================================================
+
     def edit_document(self):
+
         try:
-            # Fetch complete pending rows so each database record keeps its ID
-            # and all fields that are not displayed in the editor.
+
+            # Fetch complete pending records, including their database IDs.
             original_rows = self.db.editable_rows("*")
+
             if not original_rows:
-                st.info("No Publication entries are available for editing.")
+                st.info(
+                    "No Publication entries are available for editing."
+                )
                 return
 
             original_by_id = {
-                str(row.get("id")): dict(row)
+                str(row["id"]): dict(row)
                 for row in original_rows
                 if row.get("id") is not None
             }
 
             if not original_by_id:
+
                 st.error(
-                    "Publication records do not contain database IDs. "
-                    "Individual safe updates cannot be performed."
+                    "The fetched publication records do not contain "
+                    "database IDs. Safe editing is not possible."
                 )
                 return
 
-            columns = [
-                "id",
-                "publication_type",
-                "paper_title",
-                "journal_name",
-                "issn_number",
-                "scopus_indexed",
-                "quartile",
-                "impact_factor_or_snip",
-                "author_position",
-                "author_type",
-                "doi_link",
-                "paper_proof_url",
-                "journal_scopus_proof_url",
-                "name_of_the_conference",
-                "isbn_number",
-                "chapter_title",
-                "title_of_the_book",
-                "book_level",
-                "year_of_publication",
-                "chapter_isbn_issn_number",
-                "chapter_proof",
-                "credits"
-            ]
+            # Determine which columns actually exist in the database.
+            available_columns = set()
 
-            # Include only columns available in this database version.
-            available_columns = set().union(
-                *(row.keys() for row in original_by_id.values())
-            )
+            for row in original_by_id.values():
+                available_columns.update(row.keys())
+
             visible_columns = [
-                column for column in columns
+                column
+                for column in self.EDIT_COLUMNS
                 if column == "id" or column in available_columns
             ]
 
             df = pd.DataFrame(
                 list(original_by_id.values())
             )
+
             df = df.reindex(columns=visible_columns)
 
+            # Normalize integer columns only.
+            # Credits are deliberately excluded because old records
+            # may contain fractional values such as 1.5.
+            df = self._normalize_integer_columns(df)
+
+            # Convert Scopus values into checkbox-compatible booleans.
             if "scopus_indexed" in df.columns:
+
                 df["scopus_indexed"] = (
                     df["scopus_indexed"]
                     .fillna("no")
@@ -300,62 +342,127 @@ class publicationsJournalsConference:
                     .isin(["yes", "true", "1", "y"])
                 )
 
-            # Older rows may have float-shaped integer values. Normalize only
-            # the actual integer columns; never reject legacy credits like 1.5.
-            df = self._normalize_integer_columns(df)
+            # Convert legacy credits to numeric values for the editor.
+            if "credits" in df.columns:
+                df["credits"] = pd.to_numeric(
+                    df["credits"],
+                    errors="coerce"
+                )
+
+            # ------------------------------------------------------
+            # EDITOR CONFIGURATION
+            # ------------------------------------------------------
 
             config = {
-                "id": None,
+
+                "id": st.column_config.TextColumn(
+                    "Record ID",
+                    disabled=True
+                ),
+
                 "publication_type": st.column_config.SelectboxColumn(
                     "Publication Type",
-                    options=["Journal", "Conference", "Book Chapter"],
+                    options=self.PUBLICATION_TYPES,
                     required=True
                 ),
-                "paper_title": "Paper Title",
-                "journal_name": "Journal Name",
-                "issn_number": "ISSN Number",
+
+                "paper_title": st.column_config.TextColumn(
+                    "Paper Title"
+                ),
+
+                "journal_name": st.column_config.TextColumn(
+                    "Journal Name"
+                ),
+
+                "issn_number": st.column_config.TextColumn(
+                    "ISSN Number"
+                ),
+
                 "scopus_indexed": st.column_config.CheckboxColumn(
                     "Scopus Indexed"
                 ),
+
                 "quartile": st.column_config.SelectboxColumn(
                     "Quartile",
-                    options=["Q1", "Q2", "Q3", "Q4"]
+                    options=self.QUARTILES
                 ),
+
                 "impact_factor_or_snip": st.column_config.NumberColumn(
                     "Impact Factor / SNIP",
-                    min_value=0.0
+                    min_value=0.0,
+                    step=0.01
                 ),
+
                 "author_position": st.column_config.NumberColumn(
                     "Author Position",
                     min_value=0,
                     step=1
                 ),
+
                 "author_type": st.column_config.SelectboxColumn(
                     "Author Type",
-                    options=["Author", "Co-Author", "Corresponding Author"],
+                    options=self.AUTHOR_TYPES,
                     required=True
                 ),
-                "doi_link": "DOI Link",
-                "paper_proof_url": "Paper Proof URL",
-                "journal_scopus_proof_url": "Journal Scopus Proof URL",
-                "name_of_the_conference": "Conference Name",
-                "isbn_number": "ISBN Number",
-                "chapter_title": "Chapter Title",
-                "title_of_the_book": "Book Title",
+
+                "doi_link": st.column_config.TextColumn(
+                    "DOI Link"
+                ),
+
+                "paper_proof_url": st.column_config.TextColumn(
+                    "Paper Proof URL"
+                ),
+
+                "journal_scopus_proof_url": st.column_config.TextColumn(
+                    "Journal Scopus Proof URL"
+                ),
+
+                "name_of_the_conference": st.column_config.TextColumn(
+                    "Conference Name"
+                ),
+
+                "isbn_number": st.column_config.TextColumn(
+                    "ISBN Number"
+                ),
+
+                "chapter_title": st.column_config.TextColumn(
+                    "Chapter Title"
+                ),
+
+                "title_of_the_book": st.column_config.TextColumn(
+                    "Book Title"
+                ),
+
                 "book_level": st.column_config.SelectboxColumn(
                     "National / International",
                     options=["National", "International"]
                 ),
+
                 "year_of_publication": st.column_config.NumberColumn(
                     "Publication Year",
                     min_value=1900,
                     step=1
                 ),
-                "chapter_isbn_issn_number": "ISBN / ISSN Number",
-                "chapter_proof": "Chapter Proof",
+
+                "chapter_isbn_issn_number": st.column_config.TextColumn(
+                    "ISBN / ISSN Number"
+                ),
+
+                "chapter_proof": st.column_config.TextColumn(
+                    "Chapter Proof"
+                ),
+
                 "credits": st.column_config.NumberColumn(
-                    "Credits"
+                    "Credits",
+                    disabled=True
                 )
+            }
+
+            # Avoid passing configuration for missing database columns.
+            config = {
+                key: value
+                for key, value in config.items()
+                if key in df.columns
             }
 
             edited_df = st.data_editor(
@@ -363,405 +470,214 @@ class publicationsJournalsConference:
                 num_rows="delete",
                 use_container_width=True,
                 hide_index=True,
-                disabled=["id", "credits"],
+                disabled=[
+                    column
+                    for column in ["id", "credits"]
+                    if column in df.columns
+                ],
                 column_config=config,
-                key="publications_editor_v2"
+                key="publications_editor_v3"
             )
 
-            # A button performs one update operation. A persistent toggle can
-            # otherwise repeat the database update on every Streamlit rerun.
-            if st.button(
+            # ------------------------------------------------------
+            # UPDATE BUTTON
+            # ------------------------------------------------------
+
+            if not st.button(
                 "Update",
-                key="publications_update_v2",
+                key="publications_update_v3",
                 type="primary",
                 width="stretch"
             ):
-                edited_df = edited_df.copy()
-
-                # Keep a stable row identity; never replace the whole table.
-                edited_ids = {
-                    str(value)
-                    for value in edited_df["id"].tolist()
-                    if not self._is_missing(value)
-                }
-
-                original_ids = set(original_by_id.keys())
-                deleted_ids = original_ids - edited_ids
-
-                update_errors = []
-                updated_count = 0
-                deleted_count = 0
-
-                # Update existing records one at a time. Fields absent from the
-                # editor (including approval metadata) are never overwritten.
-                for _, edited_row in edited_df.iterrows():
-                    record_id = str(edited_row.get("id"))
-                    original = original_by_id.get(record_id)
-
-                    if original is None:
-                        update_errors.append(
-                            f"Could not match database record ID {record_id}."
-                        )
-                        continue
-
-                    values = edited_row.to_dict()
-
-                    # Resolve author classification consistently:
-                    # position 1 always means Author; otherwise the selected
-                    # Corresponding Author value is retained, else Co-Author.
-                    try:
-                        author_position = self._to_integer_or_none(
-                            values.get("author_position"),
-                            "author_position"
-                        )
-                    except ValueError as e:
-                        update_errors.append(str(e))
-                        continue
-
-                    selected_author_type = str(
-                        values.get("author_type") or ""
-                    ).strip()
-
-                    author_type = self.getAuthorType(
-                        author_position,
-                        selected_author_type == "Corresponding Author"
-                    )
-
-                    scopus_value = self._clean_database_value(
-                        "scopus_indexed",
-                        values.get("scopus_indexed")
-                    )
-
-                    values["author_position"] = author_position
-                    values["author_type"] = author_type
-                    values["scopus_indexed"] = scopus_value
-
-                    # Recalculate every row's credits, including old records
-                    # whose previous quartile-based credit was fractional.
-                    values["credits"] = self.calculateCredits(
-                        values.get("publication_type"),
-                        scopus_value,
-                        author_type,
-                        author_position,
-                        values.get("quartile")
-                    )
-
-                    # Build a minimal update payload. This is the key safeguard:
-                    # unchanged fields and hidden database fields remain intact.
-                    update_values = {}
-
-                    for column in visible_columns:
-                        if column in ("id", "credits"):
-                            continue
-
-                        new_value = self._clean_database_value(
-                            column,
-                            values.get(column)
-                        )
-                        old_value = original.get(column)
-
-                        if not self._same_value(old_value, new_value):
-                            update_values[column] = new_value
-
-                    # Update credits if the old stored value differs. This
-                    # replaces legacy 1.5 values with the current rule result.
-                    if not self._same_value(
-                        original.get("credits"),
-                        values["credits"]
-                    ):
-                        update_values["credits"] = values["credits"]
-
-                    if update_values:
-                        try:
-                            if self.db.update_by_id(
-                                original.get("id"),
-                                update_values,
-                                approvals=False
-                            ):
-                                updated_count += 1
-                            else:
-                                update_errors.append(
-                                    f"Update failed for record ID {record_id}."
-                                )
-                        except Exception as e:
-                            update_errors.append(
-                                f"Record {record_id}: {e}"
-                            )
-
-                # Delete only rows explicitly removed from the editor.
-                for record_id in deleted_ids:
-                    original = original_by_id[record_id]
-                    try:
-                        if self.db.delete_by_id(original.get("id")):
-                            deleted_count += 1
-                        else:
-                            update_errors.append(
-                                f"Deletion failed for record ID {record_id}."
-                            )
-                    except Exception as e:
-                        update_errors.append(
-                            f"Deletion {record_id}: {e}"
-                        )
-
-                if update_errors:
-                    st.error(
-                        "Some publication changes could not be completed. "
-                        "Successfully processed records were not rolled back."
-                    )
-                    for error in update_errors:
-                        st.write(f"- {error}")
-                else:
-                    st.success(
-                        "Publication entries updated successfully. "
-                        f"Updated: {updated_count} | Deleted: {deleted_count}"
-                    )
-        except Exception as e:
-            st.error(f"Edit Error: {e}")
-
-    def viewDocuments(self):
-        try:
-            columns = (
-                "publication_type,paper_title,journal_name,issn_number,"
-                "scopus_indexed,quartile,impact_factor_or_snip,"
-                "author_position,author_type,doi_link,paper_proof_url,"
-                "journal_scopus_proof_url,name_of_the_conference,isbn_number,"
-                "chapter_title,title_of_the_book,book_level,"
-                "year_of_publication,chapter_isbn_issn_number,chapter_proof,"
-                "credits,hod_approval,admin_approval"
-            )
-
-            df = self.db.dataframe(columns)
-
-            if df.empty:
-                st.info("No Publication entries found.")
                 return
 
-            st.subheader(
-                "Publications - Journals / Conferences / Book Chapters"
-            )
+            if "id" not in edited_df.columns:
+                st.error("Record ID is missing from the editor.")
+                return
 
-            for _, row in df.iterrows():
-                title = (
-                    row["chapter_title"]
-                    if row["publication_type"] == "Book Chapter"
-                    else row["paper_title"]
-                )
-
-                with st.container(border=True):
-                    st.subheader(
-                        str(title),
-                        divider=True,
-                        text_alignment="center"
-                    )
-
-                    st.write(f"**Type:** {row['publication_type']}")
-                    st.write(
-                        f"**Scopus Indexed:** "
-                        f"{str(row['scopus_indexed']).title()}"
-                    )
-                    st.write(f"**Author Type:** {row['author_type']}")
-                    st.write(f"**Author Position:** {row['author_position']}")
-
-                    if row["publication_type"] == "Journal":
-                        st.write(f"**Journal Name:** {row['journal_name']}")
-                        st.write(f"**ISSN Number:** {row['issn_number']}")
-                      min_value=0.0
-                ),
-                "author_position": st.column_config.NumberColumn(
-                    "Author Position",
-                    min_value=0,
-                    step=1
-                ),
-                "author_type": st.column_config.SelectboxColumn(
-                    "Author Type",
-                    options=["Author", "Co-Author", "Corresponding Author"],
-                    required=True
-                ),
-                "doi_link": "DOI Link",
-                "paper_proof_url": "Paper Proof URL",
-                "journal_scopus_proof_url": "Journal Scopus Proof URL",
-                "name_of_the_conference": "Conference Name",
-                "isbn_number": "ISBN Number",
-                "chapter_title": "Chapter Title",
-                "title_of_the_book": "Book Title",
-                "book_level": st.column_config.SelectboxColumn(
-                    "National / International",
-                    options=["National", "International"]
-                ),
-                "year_of_publication": st.column_config.NumberColumn(
-                    "Publication Year",
-                    min_value=1900,
-                    step=1
-                ),
-                "chapter_isbn_issn_number": "ISBN / ISSN Number",
-                "chapter_proof": "Chapter Proof",
-                "credits": st.column_config.NumberColumn(
-                    "Credits"
-                )
+            edited_ids = {
+                str(value)
+                for value in edited_df["id"].tolist()
+                if not self._is_missing(value)
             }
 
-            edited_df = st.data_editor(
-                df,
-                num_rows="delete",
-                use_container_width=True,
-                hide_index=True,
-                disabled=["id", "credits"],
-                column_config=config,
-                key="publications_editor_v2"
-            )
+            original_ids = set(original_by_id.keys())
 
-            # A button performs one update operation. A persistent toggle can
-            # otherwise repeat the database update on every Streamlit rerun.
-            if st.button(
-                "Update",
-                key="publications_update_v2",
-                type="primary",
-                width="stretch"
-            ):
-                edited_df = edited_df.copy()
+            deleted_ids = original_ids - edited_ids
 
-                # Keep a stable row identity; never replace the whole table.
-                edited_ids = {
-                    str(value)
-                    for value in edited_df["id"].tolist()
-                    if not self._is_missing(value)
-                }
+            errors = []
+            updated_count = 0
+            deleted_count = 0
 
-                original_ids = set(original_by_id.keys())
-                deleted_ids = original_ids - edited_ids
+            # ------------------------------------------------------
+            # UPDATE EXISTING RECORDS INDIVIDUALLY
+            # ------------------------------------------------------
 
-                update_errors = []
-                updated_count = 0
-                deleted_count = 0
+            for _, edited_row in edited_df.iterrows():
 
-                # Update existing records one at a time. Fields absent from the
-                # editor (including approval metadata) are never overwritten.
-                for _, edited_row in edited_df.iterrows():
-                    record_id = str(edited_row.get("id"))
-                    original = original_by_id.get(record_id)
+                record_id = str(edited_row.get("id"))
 
-                    if original is None:
-                        update_errors.append(
-                            f"Could not match database record ID {record_id}."
-                        )
+                original = original_by_id.get(record_id)
+
+                if original is None:
+                    errors.append(
+                        f"Unknown publication record ID: {record_id}"
+                    )
+                    continue
+
+                values = edited_row.to_dict()
+
+                # Convert author position safely.
+                try:
+
+                    position = self._to_integer_or_none(
+                        values.get("author_position"),
+                        "author_position"
+                    )
+
+                except ValueError as e:
+                    errors.append(f"Record {record_id}: {e}")
+                    continue
+
+                # Determine the corresponding-author selection.
+                selected_author_type = str(
+                    values.get("author_type") or ""
+                ).strip()
+
+                author_type = self.getAuthorType(
+                    position,
+                    selected_author_type == "Corresponding Author"
+                )
+
+                # Normalize Scopus value.
+                scopus_value = self._db_value(
+                    "scopus_indexed",
+                    values.get("scopus_indexed")
+                )
+
+                values["author_position"] = position
+                values["author_type"] = author_type
+                values["scopus_indexed"] = scopus_value
+
+                # Recalculate credits using the current rules.
+                new_credits = self.calculateCredits(
+                    values.get("publication_type"),
+                    scopus_value,
+                    author_type,
+                    position,
+                    values.get("quartile")
+                )
+
+                # Build an update dictionary containing only changed fields.
+                # Hidden fields are never included.
+                update_values = {}
+
+                for column in visible_columns:
+
+                    if column in {"id", "credits"}:
                         continue
 
-                    values = edited_row.to_dict()
+                    new_value = self._db_value(
+                        column,
+                        values.get(column)
+                    )
 
-                    # Resolve author classification consistently:
-                    # position 1 always means Author; otherwise the selected
-                    # Corresponding Author value is retained, else Co-Author.
+                    old_value = original.get(column)
+
+                    if not self._same_value(old_value, new_value):
+                        update_values[column] = new_value
+
+                # Migrate old credit values such as 1.5 to the new
+                # credit calculation, even when the user did not edit them.
+                if not self._same_value(
+                    original.get("credits"),
+                    new_credits
+                ):
+                    update_values["credits"] = new_credits
+
+                # Save only when at least one field has changed.
+                if update_values:
+
                     try:
-                        author_position = self._to_integer_or_none(
-                            values.get("author_position"),
-                            "author_position"
+
+                        success = self.db.update_by_id(
+                            original.get("id"),
+                            update_values,
+                            approvals=False
                         )
-                    except ValueError as e:
-                        update_errors.append(str(e))
-                        continue
 
-                    selected_author_type = str(
-                        values.get("author_type") or ""
-                    ).strip()
-
-                    author_type = self.getAuthorType(
-                        author_position,
-                        selected_author_type == "Corresponding Author"
-                    )
-
-                    scopus_value = self._clean_database_value(
-                        "scopus_indexed",
-                        values.get("scopus_indexed")
-                    )
-
-                    values["author_position"] = author_position
-                    values["author_type"] = author_type
-                    values["scopus_indexed"] = scopus_value
-
-                    # Recalculate every row's credits, including old records
-                    # whose previous quartile-based credit was fractional.
-                    values["credits"] = self.calculateCredits(
-                        values.get("publication_type"),
-                        scopus_value,
-                        author_type,
-                        author_position,
-                        values.get("quartile")
-                    )
-
-                    # Build a minimal update payload. This is the key safeguard:
-                    # unchanged fields and hidden database fields remain intact.
-                    update_values = {}
-
-                    for column in visible_columns:
-                        if column in ("id", "credits"):
-                            continue
-
-                        new_value = self._clean_database_value(
-                            column,
-                            values.get(column)
-                        )
-                        old_value = original.get(column)
-
-                        if not self._same_value(old_value, new_value):
-                            update_values[column] = new_value
-
-                    # Update credits if the old stored value differs. This
-                    # replaces legacy 1.5 values with the current rule result.
-                    if not self._same_value(
-                        original.get("credits"),
-                        values["credits"]
-                    ):
-                        update_values["credits"] = values["credits"]
-
-                    if update_values:
-                        try:
-                            if self.db.update_by_id(
-                                original.get("id"),
-                                update_values,
-                                approvals=False
-                            ):
-                                updated_count += 1
-                            else:
-                                update_errors.append(
-                                    f"Update failed for record ID {record_id}."
-                                )
-                        except Exception as e:
-                            update_errors.append(
-                                f"Record {record_id}: {e}"
-                            )
-
-                # Delete only rows explicitly removed from the editor.
-                for record_id in deleted_ids:
-                    original = original_by_id[record_id]
-                    try:
-                        if self.db.delete_by_id(original.get("id")):
-                            deleted_count += 1
+                        if success:
+                            updated_count += 1
                         else:
-                            update_errors.append(
-                                f"Deletion failed for record ID {record_id}."
+                            errors.append(
+                                f"Update failed for record {record_id}."
                             )
+
                     except Exception as e:
-                        update_errors.append(
-                            f"Deletion {record_id}: {e}"
+                        errors.append(
+                            f"Record {record_id}: {e}"
                         )
 
-                if update_errors:
-                    st.error(
-                        "Some publication changes could not be completed. "
-                        "Successfully processed records were not rolled back."
+            # ------------------------------------------------------
+            # DELETE ONLY ROWS REMOVED BY THE USER
+            # ------------------------------------------------------
+
+            for record_id in deleted_ids:
+
+                try:
+
+                    success = self.db.delete_by_id(
+                        original_by_id[record_id].get("id")
                     )
-                    for error in update_errors:
-                        st.write(f"- {error}")
-                else:
-                    st.success(
-                        "Publication entries updated successfully. "
-                        f"Updated: {updated_count} | Deleted: {deleted_count}"
+
+                    if success:
+                        deleted_count += 1
+                    else:
+                        errors.append(
+                            f"Delete failed for record {record_id}."
+                        )
+
+                except Exception as e:
+                    errors.append(
+                        f"Delete {record_id}: {e}"
                     )
+
+            # ------------------------------------------------------
+            # UPDATE RESULT
+            # ------------------------------------------------------
+
+            if errors:
+
+                st.error(
+                    "Some changes could not be completed. "
+                    "Successful individual operations may already "
+                    "have been saved."
+                )
+
+                for message in errors:
+                    st.write(f"- {message}")
+
+            else:
+
+                st.success(
+                    "Publication entries updated successfully. "
+                    f"Updated: {updated_count} | "
+                    f"Deleted: {deleted_count}"
+                )
+
+                st.rerun()
+
         except Exception as e:
             st.error(f"Edit Error: {e}")
 
+    # ==============================================================
+    # VIEW PUBLICATION RECORDS
+    # ==============================================================
+
     def viewDocuments(self):
+
         try:
+
             columns = (
                 "publication_type,paper_title,journal_name,issn_number,"
                 "scopus_indexed,quartile,impact_factor_or_snip,"
@@ -783,152 +699,157 @@ class publicationsJournalsConference:
             )
 
             for _, row in df.iterrows():
+
+                publication_type = row.get("publication_type")
+
                 title = (
-                    row["chapter_title"]
-                    if row["publication_type"] == "Book Chapter"
-                    else row["paper_title"]
+                    row.get("chapter_title")
+                    if publication_type == "Book Chapter"
+                    else row.get("paper_title")
                 )
 
                 with st.container(border=True):
+
                     st.subheader(
-                        str(title),
+                        str(title or "Untitled Publication"),
                         divider=True,
                         text_alignment="center"
                     )
 
-                    st.write(f"**Type:** {row['publication_type']}")
+                    st.write(f"**Type:** {publication_type}")
+
                     st.write(
-                        f"**Scopus Indexed:** "
-                        f"{str(row['scopus_indexed']).title()}"
-                    )
-                    st.write(f"**Author Type:** {row['author_type']}")
-                    st.write(f"**Author Position:** {row['author_position']}")
-
-                    if row["publication_type"] == "Journal":
-                        st.write(f"**Journal Name:** {row['journal_name']}")
-                        st.write(f"**ISSN Number:** {row['issn_number']}")
-                    ),
-                    axis=1
-                )
-
-                # Re-normalize after calculation; preserve integer objects.
-                edited_df = self._normalize_integer_columns(edited_df)
-
-                if self.db.replace_pending(edited_df):
-                    st.success("Publication Entries Updated Successfully.")
-                else:
-                    st.warning("Publication Entries Could Not Be Updated.")
-
-        except Exception as e:
-            st.error(f"Edit Error: {e}")
-
-    def viewDocuments(self):
-        try:
-            columns = (
-                "publication_type,paper_title,journal_name,issn_number,"
-                "scopus_indexed,quartile,impact_factor_or_snip,"
-                "author_position,author_type,doi_link,paper_proof_url,"
-                "journal_scopus_proof_url,name_of_the_conference,isbn_number,"
-                "chapter_title,title_of_the_book,book_level,"
-                "year_of_publication,chapter_isbn_issn_number,chapter_proof,"
-                "credits,hod_approval,admin_approval"
-            )
-
-            df = self.db.dataframe(columns)
-
-            if df.empty:
-                st.info("No Publication entries found.")
-                return
-
-            st.subheader(
-                "Publications - Journals / Conferences / Book Chapters"
-            )
-
-            for _, row in df.iterrows():
-                title = (
-                    row["chapter_title"]
-                    if row["publication_type"] == "Book Chapter"
-                    else row["paper_title"]
-                )
-
-                with st.container(border=True):
-                    st.subheader(
-                        str(title),
-                        divider=True,
-                        text_alignment="center"
+                        "**Scopus Indexed:** "
+                        f"{str(row.get('scopus_indexed')).title()}"
                     )
 
-                    st.write(f"**Type:** {row['publication_type']}")
                     st.write(
-                        f"**Scopus Indexed:** "
-                        f"{str(row['scopus_indexed']).title()}"
+                        f"**Author Type:** {row.get('author_type')}"
                     )
-                    st.write(f"**Author Type:** {row['author_type']}")
-                    st.write(f"**Author Position:** {row['author_position']}")
 
-                    if row["publication_type"] == "Journal":
-                        st.write(f"**Journal Name:** {row['journal_name']}")
-                        st.write(f"**ISSN Number:** {row['issn_number']}")
-                        st.write(f"**Quartile:** {row['quartile']}")
+                    st.write(
+                        f"**Author Position:** "
+                        f"{row.get('author_position')}"
+                    )
+
+                    # JOURNAL DETAILS
+                    if publication_type == "Journal":
+
                         st.write(
-                            f"**Impact Factor / SNIP:** "
-                            f"{row['impact_factor_or_snip']}"
-                        )
-                        st.write(f"**DOI Link:** {row['doi_link']}")
-                        st.write(
-                            f"**Paper Proof URL:** {row['paper_proof_url']}"
-                        )
-                        st.write(
-                            f"**Journal Scopus Proof URL:** "
-                            f"{row['journal_scopus_proof_url']}"
+                            f"**Journal Name:** {row.get('journal_name')}"
                         )
 
-                    elif row["publication_type"] == "Conference":
                         st.write(
-                            f"**Conference Name:** "
-                            f"{row['name_of_the_conference']}"
-                        )
-                        st.write(f"**ISBN Number:** {row['isbn_number']}")
-                        st.write(f"**DOI Link:** {row['doi_link']}")
-                        st.write(
-                            f"**Paper Proof URL:** {row['paper_proof_url']}"
+                            f"**ISSN Number:** {row.get('issn_number')}"
                         )
 
-                    elif row["publication_type"] == "Book Chapter":
-                        st.write(f"**Book Title:** {row['title_of_the_book']}")
-                        st.write(f"**Level:** {row['book_level']}")
                         st.write(
-                            f"**Year Of Publication:** "
-                            f"{row['year_of_publication']}"
+                            f"**Quartile:** {row.get('quartile')}"
                         )
+
                         st.write(
-                            f"**ISBN / ISSN:** "
-                            f"{row['chapter_isbn_issn_number']}"
+                            "**Impact Factor / SNIP:** "
+                            f"{row.get('impact_factor_or_snip')}"
                         )
-                        st.write(f"**Chapter Proof:** {row['chapter_proof']}")
+
+                        st.write(
+                            f"**DOI Link:** {row.get('doi_link')}"
+                        )
+
+                        st.write(
+                            "**Paper Proof URL:** "
+                            f"{row.get('paper_proof_url')}"
+                        )
+
+                        st.write(
+                            "**Journal Scopus Proof URL:** "
+                            f"{row.get('journal_scopus_proof_url')}"
+                        )
+
+                    # CONFERENCE DETAILS
+                    elif publication_type == "Conference":
+
+                        st.write(
+                            "**Conference Name:** "
+                            f"{row.get('name_of_the_conference')}"
+                        )
+
+                        st.write(
+                            f"**ISBN Number:** {row.get('isbn_number')}"
+                        )
+
+                        st.write(
+                            f"**DOI Link:** {row.get('doi_link')}"
+                        )
+
+                        st.write(
+                            "**Paper Proof URL:** "
+                            f"{row.get('paper_proof_url')}"
+                        )
+
+                    # BOOK CHAPTER DETAILS
+                    elif publication_type == "Book Chapter":
+
+                        st.write(
+                            f"**Book Title:** {row.get('title_of_the_book')}"
+                        )
+
+                        st.write(
+                            f"**Level:** {row.get('book_level')}"
+                        )
+
+                        st.write(
+                            "**Year Of Publication:** "
+                            f"{row.get('year_of_publication')}"
+                        )
+
+                        st.write(
+                            "**ISBN / ISSN:** "
+                            f"{row.get('chapter_isbn_issn_number')}"
+                        )
+
+                        st.write(
+                            f"**Chapter Proof:** {row.get('chapter_proof')}"
+                        )
 
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(f"**Credits:** {row['credits']}")
+                        st.write(
+                            f"**Credits:** {row.get('credits')}"
+                        )
 
                     with col2:
-                        st.write(f"**HoD Approval:** {row['hod_approval']}")
+                        st.write(
+                            f"**HoD Approval:** "
+                            f"{row.get('hod_approval')}"
+                        )
 
                     with col3:
                         st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
+                            f"**Admin Approval:** "
+                            f"{row.get('admin_approval')}"
                         )
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
+    # ==============================================================
+    # MAIN APPLICATION LAYOUT
+    # ==============================================================
+
     def main_layout(self):
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
 
+        # ==========================================================
+        # ENTRY TAB
+        # ==========================================================
+
         with tab_entry:
+
             col1, col2 = st.columns(
                 [1, 2],
                 border=True,
@@ -936,23 +857,27 @@ class publicationsJournalsConference:
             )
 
             with col1:
+
                 st.subheader("Publication Entry")
 
                 publication_type = st.radio(
                     "Select Type",
-                    ["Journal", "Conference", "Book Chapter"],
+                    self.PUBLICATION_TYPES,
                     horizontal=True,
-                    index=None
+                    index=None,
+                    key="publication_type_entry"
                 )
 
+                # Default values for unused fields.
                 paper_title = None
                 journal_name = None
                 issn_number = None
                 scopus_indexed = False
                 quartile = None
                 impact_factor_or_snip = None
-                author_position = None
+                author_position = 0
                 author_type = None
+                corresponding_author = False
                 doi_link = None
                 paper_proof_url = None
                 journal_scopus_proof_url = None
@@ -965,25 +890,34 @@ class publicationsJournalsConference:
                 chapter_isbn_issn_number = None
                 chapter_proof = None
 
+                # Paper title for Journal and Conference.
                 if publication_type in ["Journal", "Conference"]:
                     paper_title = st.text_input("Paper Title")
 
+                # --------------------------------------------------
+                # JOURNAL ENTRY
+                # --------------------------------------------------
+
                 if publication_type == "Journal":
+
                     journal_name = st.text_input("Journal Name")
+
                     issn_number = st.text_input(
                         "ISSN Number",
                         placeholder="XXXX-XXXX"
                     )
+
                     author_position = st.number_input(
                         "Author Position",
                         min_value=0,
                         step=1
                     )
+
                     scopus_indexed = st.checkbox("Scopus Indexed")
-                    
+
                     quartile = st.segmented_control(
                         "Quartile",
-                        ["Q1", "Q2", "Q3", "Q4"],
+                        self.QUARTILES,
                         selection_mode="single"
                     )
 
@@ -996,18 +930,28 @@ class publicationsJournalsConference:
                     corresponding_author = st.checkbox(
                         "Are You A Corresponding Author"
                     )
+
                     author_type = self.getAuthorType(
                         author_position,
                         corresponding_author
                     )
 
                     doi_link = st.text_input("DOI Link")
-                    paper_proof_url = st.text_input("Paper Proof URL")
+
+                    paper_proof_url = st.text_input(
+                        "Paper Proof URL"
+                    )
+
                     journal_scopus_proof_url = st.text_input(
                         "Journal Scopus Proof URL"
                     )
 
+                # --------------------------------------------------
+                # CONFERENCE ENTRY
+                # --------------------------------------------------
+
                 elif publication_type == "Conference":
+
                     name_of_the_conference = st.text_input(
                         "Name Of The Conference"
                     )
@@ -1028,17 +972,29 @@ class publicationsJournalsConference:
                     corresponding_author = st.checkbox(
                         "Are You A Corresponding Author"
                     )
+
                     author_type = self.getAuthorType(
                         author_position,
                         corresponding_author
                     )
 
                     doi_link = st.text_input("DOI Link")
-                    paper_proof_url = st.text_input("Paper Proof URL")
+
+                    paper_proof_url = st.text_input(
+                        "Paper Proof URL"
+                    )
+
+                # --------------------------------------------------
+                # BOOK CHAPTER ENTRY
+                # --------------------------------------------------
 
                 elif publication_type == "Book Chapter":
+
                     chapter_title = st.text_input("Chapter Title")
-                    title_of_the_book = st.text_input("Title Of The Book")
+
+                    title_of_the_book = st.text_input(
+                        "Title Of The Book"
+                    )
 
                     book_level = st.pills(
                         "National / International",
@@ -1054,7 +1010,7 @@ class publicationsJournalsConference:
                     )
 
                     chapter_isbn_issn_number = st.text_input(
-                        label="ISBN / ISSN Number",
+                        "ISBN / ISSN Number",
                         placeholder="XXXX-XXXX"
                     )
 
@@ -1067,102 +1023,115 @@ class publicationsJournalsConference:
                     corresponding_author = st.checkbox(
                         "Are You A Corresponding Author"
                     )
+
                     author_type = self.getAuthorType(
                         author_position,
                         corresponding_author
                     )
 
                     scopus_indexed = st.checkbox("Scopus Indexed")
-                    chapter_proof = st.text_input("Chapter Proof URL")
 
-                # Automatic validation based on publication type.
-                proceed = bool(publication_type)
+                    chapter_proof = st.text_input(
+                        "Chapter Proof URL"
+                    )
 
-                if publication_type == "Journal":
-                    proceed = all([
-                        bool(paper_title and paper_title.strip()),
-                        bool(journal_name and journal_name.strip()),
-                        not scopus_indexed or bool(quartile),
-                        bool(doi_link and doi_link.strip()),
-                        bool(paper_proof_url and paper_proof_url.strip()),
-                        bool(
-                            journal_scopus_proof_url
-                            and journal_scopus_proof_url.strip()
-                        )
-                    ])
+                # --------------------------------------------------
+                # VALIDATION
+                # --------------------------------------------------
 
-                elif publication_type == "Conference":
-                    proceed = all([
-                        bool(paper_title and paper_title.strip()),
-                        bool(
-                            name_of_the_conference
-                            and name_of_the_conference.strip()
-                        ),
-                        bool(doi_link and doi_link.strip()),
-                        bool(paper_proof_url and paper_proof_url.strip())
-                    ])
-
-                elif publication_type == "Book Chapter":
-                    proceed = all([
-                        bool(chapter_title and chapter_title.strip()),
-                        bool(title_of_the_book and title_of_the_book.strip()),
-                        bool(book_level),
-                        bool(chapter_isbn_issn_number and
-                             chapter_isbn_issn_number.strip()),
-                        bool(chapter_proof and chapter_proof.strip())
-                    ])
+                proceed = False
+                validation_message = None
 
                 if not publication_type:
-                    st.warning("Please select Publication Type.")
+
+                    validation_message = (
+                        "Please select Publication Type."
+                    )
 
                 elif publication_type == "Journal":
-                    if not paper_title or not paper_title.strip():
-                        st.warning("Please enter Paper Title.")
-                    elif not journal_name or not journal_name.strip():
-                        st.warning("Please enter Journal Name.")
+
+                    if not paper_title.strip():
+                        validation_message = "Please enter Paper Title."
+
+                    elif not journal_name.strip():
+                        validation_message = "Please enter Journal Name."
+
                     elif scopus_indexed and not quartile:
-                        st.warning("Please select Quartile.")
-                    elif not doi_link or not doi_link.strip():
-                        st.warning("Please enter DOI Link.")
-                    elif not paper_proof_url or not paper_proof_url.strip():
-                        st.warning("Please enter Paper Proof URL.")
-                    elif (
-                        not journal_scopus_proof_url
-                        or not journal_scopus_proof_url.strip()
-                    ):
-                        st.warning("Please enter Journal Scopus Proof URL.")
+                        validation_message = "Please select Quartile."
+
+                    elif not doi_link.strip():
+                        validation_message = "Please enter DOI Link."
+
+                    elif not paper_proof_url.strip():
+                        validation_message = "Please enter Paper Proof URL."
+
+                    elif not journal_scopus_proof_url.strip():
+                        validation_message = (
+                            "Please enter Journal Scopus Proof URL."
+                        )
+
+                    else:
+                        proceed = True
 
                 elif publication_type == "Conference":
-                    if not paper_title or not paper_title.strip():
-                        st.warning("Please enter Paper Title.")
-                    elif (
-                        not name_of_the_conference
-                        or not name_of_the_conference.strip()
-                    ):
-                        st.warning("Please enter Conference Name.")
-                    elif not doi_link or not doi_link.strip():
-                        st.warning("Please enter DOI Link.")
-                    elif not paper_proof_url or not paper_proof_url.strip():
-                        st.warning("Please enter Paper Proof URL.")
+
+                    if not paper_title.strip():
+                        validation_message = "Please enter Paper Title."
+
+                    elif not name_of_the_conference.strip():
+                        validation_message = (
+                            "Please enter Conference Name."
+                        )
+
+                    elif not doi_link.strip():
+                        validation_message = "Please enter DOI Link."
+
+                    elif not paper_proof_url.strip():
+                        validation_message = "Please enter Paper Proof URL."
+
+                    else:
+                        proceed = True
 
                 elif publication_type == "Book Chapter":
-                    if not chapter_title or not chapter_title.strip():
-                        st.warning("Please enter Chapter Title.")
-                    elif not title_of_the_book or not title_of_the_book.strip():
-                        st.warning("Please enter Book Title.")
+
+                    if not chapter_title.strip():
+                        validation_message = "Please enter Chapter Title."
+
+                    elif not title_of_the_book.strip():
+                        validation_message = "Please enter Book Title."
+
                     elif not book_level:
-                        st.warning("Please select National / International.")
-                    elif (
-                        not chapter_isbn_issn_number
-                        or not chapter_isbn_issn_number.strip()
-                    ):
-                        st.warning("Please enter ISBN / ISSN Number.")
-                    elif not chapter_proof or not chapter_proof.strip():
-                        st.warning("Please enter Chapter Proof URL.")
+                        validation_message = (
+                            "Please select National / International."
+                        )
+
+                    elif not chapter_isbn_issn_number.strip():
+                        validation_message = (
+                            "Please enter ISBN / ISSN Number."
+                        )
+
+                    elif not chapter_proof.strip():
+                        validation_message = (
+                            "Please enter Chapter Proof URL."
+                        )
+
+                    else:
+                        proceed = True
+
+                if validation_message:
+                    st.warning(validation_message)
+
+            # ======================================================
+            # ENTRY PREVIEW
+            # ======================================================
 
             with col2:
+
                 if proceed:
-                    scopus_value = "yes" if scopus_indexed else "no"
+
+                    scopus_value = (
+                        "yes" if scopus_indexed else "no"
+                    )
 
                     credits = self.calculateCredits(
                         publication_type,
@@ -1173,58 +1142,96 @@ class publicationsJournalsConference:
                     )
 
                     st.subheader("Publication Details")
-                    st.write(f"**Publication Type:** {publication_type}")
+
                     st.write(
-                        f"**Scopus Indexed:** "
+                        f"**Publication Type:** {publication_type}"
+                    )
+
+                    st.write(
+                        "**Scopus Indexed:** "
                         f"{'Yes' if scopus_indexed else 'No'}"
                     )
-                    st.write(f"**Author Type:** {author_type}")
-                    st.write(f"**Author Position:** {author_position}")
+
+                    st.write(
+                        f"**Author Type:** {author_type}"
+                    )
+
+                    st.write(
+                        f"**Author Position:** {author_position}"
+                    )
 
                     if publication_type == "Journal":
+
                         st.write(f"**Paper Title:** {paper_title}")
                         st.write(f"**Journal Name:** {journal_name}")
                         st.write(f"**ISSN Number:** {issn_number}")
                         st.write(f"**Quartile:** {quartile}")
+
                         st.write(
-                            f"**Impact Factor / SNIP:** "
+                            "**Impact Factor / SNIP:** "
                             f"{impact_factor_or_snip}"
                         )
+
                         st.write(f"**DOI Link:** {doi_link}")
-                        st.write(f"**Paper Proof URL:** {paper_proof_url}")
+
                         st.write(
-                            f"**Journal Scopus Proof URL:** "
+                            f"**Paper Proof URL:** {paper_proof_url}"
+                        )
+
+                        st.write(
+                            "**Journal Scopus Proof URL:** "
                             f"{journal_scopus_proof_url}"
                         )
 
                     elif publication_type == "Conference":
+
                         st.write(f"**Paper Title:** {paper_title}")
+
                         st.write(
-                            f"**Conference Name:** {name_of_the_conference}"
+                            "**Conference Name:** "
+                            f"{name_of_the_conference}"
                         )
+
                         st.write(f"**ISBN Number:** {isbn_number}")
                         st.write(f"**DOI Link:** {doi_link}")
-                        st.write(f"**Paper Proof URL:** {paper_proof_url}")
+
+                        st.write(
+                            f"**Paper Proof URL:** {paper_proof_url}"
+                        )
 
                     elif publication_type == "Book Chapter":
+
                         st.write(f"**Chapter Title:** {chapter_title}")
-                        st.write(f"**Book Title:** {title_of_the_book}")
+
+                        st.write(
+                            f"**Book Title:** {title_of_the_book}"
+                        )
+
                         st.write(f"**Level:** {book_level}")
                         st.write(f"**Year:** {year_of_publication}")
+
                         st.write(
-                            f"**ISBN / ISSN Number:** "
+                            "**ISBN / ISSN Number:** "
                             f"{chapter_isbn_issn_number}"
                         )
-                        st.write(f"**Chapter Proof URL:** {chapter_proof}")
+
+                        st.write(
+                            f"**Chapter Proof URL:** {chapter_proof}"
+                        )
 
                     st.info(f"Credits: {credits}")
 
+                    # --------------------------------------------------
+                    # ADD ENTRY
+                    # --------------------------------------------------
+
                     if st.button(
                         "Add Entry",
-                        key="publication_add",
+                        key="publication_add_v3",
                         type="secondary",
                         width="stretch"
                     ):
+
                         exists = self.duplicateEntryCheck(
                             publication_type,
                             paper_title,
@@ -1235,56 +1242,92 @@ class publicationsJournalsConference:
                         )
 
                         if exists:
+
                             st.warning("Record Already Exists.")
+
                         else:
-                            df = pd.DataFrame([{
+
+                            new_record = {
+
                                 "publication_type": publication_type,
+
                                 "paper_title": paper_title,
+
                                 "journal_name": journal_name,
-                                "issn_number": (
-                                    str(issn_number)
-                                    if issn_number is not None
-                                    else None
-                                ),
+
+                                "issn_number": issn_number,
+
                                 "scopus_indexed": scopus_value,
+
                                 "quartile": quartile,
-                                "impact_factor_or_snip": impact_factor_or_snip,
-                                "author_position": self._to_integer_or_none(
-                                    author_position, "author_position"
-                                ),
+
+                                "impact_factor_or_snip":
+                                    impact_factor_or_snip,
+
+                                "author_position":
+                                    self._to_integer_or_none(
+                                        author_position,
+                                        "author_position"
+                                    ),
+
                                 "author_type": author_type,
+
                                 "doi_link": doi_link,
+
                                 "paper_proof_url": paper_proof_url,
+
                                 "journal_scopus_proof_url":
                                     journal_scopus_proof_url,
+
                                 "name_of_the_conference":
                                     name_of_the_conference,
-                                "isbn_number": (
-                                    str(isbn_number)
-                                    if isbn_number is not None
-                                    else None
-                                ),
+
+                                "isbn_number": isbn_number,
+
                                 "chapter_title": chapter_title,
+
                                 "title_of_the_book": title_of_the_book,
+
                                 "book_level": book_level,
-                                "year_of_publication": self._to_integer_or_none(
-                                    year_of_publication, "year_of_publication"
-                                ),
+
+                                "year_of_publication":
+                                    self._to_integer_or_none(
+                                        year_of_publication,
+                                        "year_of_publication"
+                                    ),
+
                                 "chapter_isbn_issn_number":
                                     chapter_isbn_issn_number,
-                                "chapter_proof": chapter_proof,
-                                "credits": credits
-                            }])
 
-                            if self.insertDocuments(df):
-                                st.success("Publication Added Successfully.")
+                                "chapter_proof": chapter_proof,
+
+                                "credits": credits
+                            }
+
+                            new_df = pd.DataFrame([new_record])
+
+                            if self.insertDocuments(new_df):
+
+                                st.success(
+                                    "Publication Added Successfully."
+                                )
+
                             else:
+
                                 st.warning(
                                     "Publication Could Not Be Added."
                                 )
 
+        # ==========================================================
+        # EDIT TAB
+        # ==========================================================
+
         with tab_edit:
             self.edit_document()
+
+        # ==========================================================
+        # VIEW TAB
+        # ==========================================================
 
         with tab_view:
             self.viewDocuments()
