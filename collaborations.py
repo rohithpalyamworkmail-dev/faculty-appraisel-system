@@ -76,6 +76,16 @@ class collaborations:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("collaborations_reset",False):
+            st.session_state["collaborations_type"]=None
+            st.session_state["collaborations_name"]=""
+            st.session_state["collaborations_with"]=None
+            st.session_state["collaborations_organization"]=""
+            st.session_state["collaborations_description"]=""
+            st.session_state["collaborations_proof"]=""
+            st.session_state["collaborations_funding"]=False
+            st.toast("Collaboration Added Successfully!",icon="✅")
+
         tab_entry,tab_edit,tab_view=st.tabs(["Entry","Edit","View"])
 
         with tab_entry:
@@ -84,16 +94,16 @@ class collaborations:
 
             with col1:
                 st.subheader("Industry / Institute Collaboration")
-                colloboration_type=st.pills("Collaboration Type",self.colloboration_types,selection_mode="single",wrap=True)
+                colloboration_type=st.pills("Collaboration Type",self.colloboration_types,selection_mode="single",wrap=True,key="collaborations_type")
                 st.write("CoE Stands For 'Center Of Excellence'")
-                colloboration_name=st.text_input("Collaboration Name")
-                colloboration_with=st.pills("Collaboration With",self.colloboration_with_types,selection_mode="single",wrap=True)
-                organization_name=st.text_input("Organization Name")
-                description=st.text_area("Description")
-                proof_url=st.text_input("Proof URL")
+                colloboration_name=st.text_input("Collaboration Name",key="collaborations_name")
+                colloboration_with=st.pills("Collaboration With",self.colloboration_with_types,selection_mode="single",wrap=True,key="collaborations_with")
+                organization_name=st.text_input("Organization Name",key="collaborations_organization")
+                description=st.text_area("Description",key="collaborations_description")
+                proof_url=st.text_input("Proof URL",key="collaborations_proof")
                 funding=False
 
-                if colloboration_type=="CoE":funding=st.checkbox("Got Funding")
+                if colloboration_type=="CoE":funding=st.checkbox("Got Funding",key="collaborations_funding")
 
                 if colloboration_type=="MoU":
                     funding=False
@@ -125,8 +135,11 @@ class collaborations:
                     if st.button("Add Entry",key="collaborations_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"colloboration_type":colloboration_type,"colloboration_name":colloboration_name,"description":description,"proof_url":proof_url,"funding":int(funding),"colloboration_with":colloboration_with,"organization_name":organization_name,"awarded_credits":credits}])
 
-                        if self.insertDocuments(df):st.success("Collaboration Added Successfully.")
-                        else:st.warning("Collaboration Could Not Be Added.")
+                        if self.insertDocuments(df):
+                            st.session_state["collaborations_reset"]=True
+                            st.rerun()
+                        else:
+                            st.warning("Collaboration Could Not Be Added.")
 
         with tab_edit:self.edit_document()
         with tab_view:self.viewDocuments()
