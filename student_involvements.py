@@ -1,6 +1,6 @@
+
 import pandas as pd
 import streamlit as st
-
 from activity_database import ActivityDatabase
 from database import get_rows
 from global_fields import batches as GLOBAL_BATCHES
@@ -8,19 +8,12 @@ from global_fields import batches as GLOBAL_BATCHES
 
 class studentInvolvement:
     def __init__(self):
-        self.db = ActivityDatabase(
-            "student_involvements_in_startups"
-        )
+        self.db = ActivityDatabase("student_involvements_in_startups")
 
     def calculateCredits(self, students):
         return len(students) * 1.5
 
     def getStudents(self, selected_batches=None):
-        """
-        Fetch all student roll numbers from the current department
-        and filter them by the selected batch or batches.
-        """
-
         department = (
             st.session_state.get("department")
             or st.session_state.get("faculty_department")
@@ -46,23 +39,16 @@ class studentInvolvement:
             if students_df.empty:
                 return []
 
-            # Support the legacy batch column spelling and
-            # the alternative spelling if present in the schema.
             batch_column = (
                 "stuent_batch"
                 if "stuent_batch" in students_df.columns
                 else "student_batch"
             )
 
-            if batch_column not in students_df.columns:
+            if batch_column not in students_df.columns or "student_roll_number" not in students_df.columns:
                 return []
 
-            if "student_roll_number" not in students_df.columns:
-                return []
-
-            students_df[batch_column] = (
-                students_df[batch_column].astype(str).str.strip()
-            )
+            students_df[batch_column] = students_df[batch_column].astype(str).str.strip()
 
             if selected_batches:
                 if isinstance(selected_batches, str):
@@ -85,9 +71,7 @@ class studentInvolvement:
                 .str.strip()
             )
 
-            return sorted(
-                roll_numbers[roll_numbers != ""].unique().tolist()
-            )
+            return sorted(roll_numbers[roll_numbers != ""].unique().tolist())
 
         except Exception as e:
             st.error(f"Error fetching students: {e}")
@@ -109,54 +93,35 @@ class studentInvolvement:
             df = self.db.editable_dataframe(columns)
 
             if df.empty:
-                st.info(
-                    "No Student Involvement entries are available for editing."
-                )
+                st.info("No Student Involvement entries are available for editing.")
                 return
 
-            # Fetch all department students, not just faculty mentees.
             students = self.getStudents()
 
             df["student_name_roll_number"] = (
                 df["student_name_roll_number"]
                 .fillna("")
-                .apply(
-                    lambda x: [
-                        item.strip()
-                        for item in str(x).split(",")
-                        if item.strip()
-                    ]
-                )
+                .apply(lambda x: [
+                    item.strip()
+                    for item in str(x).split(",")
+                    if item.strip()
+                ])
             )
 
             config = {
-                "batch": st.column_config.TextColumn(
-                    "Batch"
+                "batch": st.column_config.TextColumn("Batch"),
+                "student_name_roll_number": st.column_config.MultiselectColumn(
+                    "Student Roll Numbers",
+                    options=students,
+                    required=True
                 ),
-                "student_name_roll_number": (
-                    st.column_config.MultiselectColumn(
-                        "Student Roll Numbers",
-                        options=students,
-                        required=True
-                    )
+                "team_name": st.column_config.TextColumn("Team Name"),
+                "description": st.column_config.TextColumn("Description"),
+                "startup_enterpernurship_name": st.column_config.TextColumn(
+                    "Startup / Entrepreneurship Name"
                 ),
-                "team_name": st.column_config.TextColumn(
-                    "Team Name"
-                ),
-                "description": st.column_config.TextColumn(
-                    "Description"
-                ),
-                "startup_enterpernurship_name": (
-                    st.column_config.TextColumn(
-                        "Startup / Entrepreneurship Name"
-                    )
-                ),
-                "proof_url": st.column_config.TextColumn(
-                    "Proof URL"
-                ),
-                "awarded_credits": st.column_config.NumberColumn(
-                    "Awarded Credits"
-                )
+                "proof_url": st.column_config.TextColumn("Proof URL"),
+                "awarded_credits": st.column_config.NumberColumn("Awarded Credits")
             }
 
             edited_df = st.data_editor(
@@ -169,23 +134,16 @@ class studentInvolvement:
                 key="student_involvement_editor"
             )
 
-            if st.toggle(
-                "Update",
-                key="student_involvement_update"
-            ):
+            if st.toggle("Update", key="student_involvement_update"):
                 rows = []
 
                 for _, row in edited_df.iterrows():
                     selected = (
                         row["student_name_roll_number"]
-                        if isinstance(
-                            row["student_name_roll_number"], list
-                        )
+                        if isinstance(row["student_name_roll_number"], list)
                         else [
                             item.strip()
-                            for item in str(
-                                row["student_name_roll_number"]
-                            ).split(",")
+                            for item in str(row["student_name_roll_number"]).split(",")
                             if item.strip()
                         ]
                     )
@@ -195,23 +153,15 @@ class studentInvolvement:
                         "student_name_roll_number": ",".join(selected),
                         "team_name": row["team_name"],
                         "description": row["description"],
-                        "startup_enterpernurship_name": (
-                            row["startup_enterpernurship_name"]
-                        ),
+                        "startup_enterpernurship_name": row["startup_enterpernurship_name"],
                         "proof_url": row["proof_url"],
-                        "awarded_credits": self.calculateCredits(
-                            selected
-                        )
+                        "awarded_credits": self.calculateCredits(selected)
                     })
 
                 if self.db.replace_pending(pd.DataFrame(rows)):
-                    st.success(
-                        "Student Involvement Updated Successfully."
-                    )
+                    st.success("Student Involvement Updated Successfully.")
                 else:
-                    st.warning(
-                        "Student Involvement Could Not Be Updated."
-                    )
+                    st.warning("Student Involvement Could Not Be Updated.")
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -227,28 +177,17 @@ class studentInvolvement:
             df = self.db.dataframe(columns)
 
             if df.empty:
-                st.info(
-                    "No Student Involvement entries found."
-                )
+                st.info("No Student Involvement entries found.")
                 return
 
-            st.subheader(
-                "Student Involvement In Startups / Entrepreneurship"
-            )
+            st.subheader("Student Involvement In Startups / Entrepreneurship")
 
             for _, row in df.iterrows():
                 with st.container(border=True):
-                    st.subheader(
-                        str(row["startup_enterpernurship_name"])
-                    )
+                    st.subheader(str(row["startup_enterpernurship_name"]))
 
                     st.write(f"**Batch:** {row['batch']}")
-
-                    st.write(
-                        "**Student Roll Numbers:** "
-                        f"{row['student_name_roll_number']}"
-                    )
-
+                    st.write(f"**Student Roll Numbers:** {row['student_name_roll_number']}")
                     st.write(f"**Team Name:** {row['team_name']}")
                     st.write(f"**Description:** {row['description']}")
                     st.write(f"**Proof URL:** {row['proof_url']}")
@@ -256,46 +195,38 @@ class studentInvolvement:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** "
-                            f"{row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
-                        st.write(
-                            f"**HoD Approval:** {row['hod_approval']}"
-                        )
+                        st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+
+        if st.session_state.pop("student_involvement_reset", False):
+            st.session_state["student_involvement_batch"] = []
+            st.session_state["student_involvement_students"] = []
+            st.session_state["student_involvement_team_name"] = ""
+            st.session_state["student_involvement_startup_name"] = ""
+            st.session_state["student_involvement_description"] = ""
+            st.session_state["student_involvement_proof_url"] = ""
+
+            st.toast("Student Involvement Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
-                st.subheader(
-                    "Student Involvement In Startups / Entrepreneurship"
-                )
+                st.subheader("Student Involvement In Startups / Entrepreneurship")
 
-                # Batch options come from global_fields.py.
-                batch_options = [
-                    str(batch)
-                    for batch in GLOBAL_BATCHES
-                ]
+                batch_options = [str(batch) for batch in GLOBAL_BATCHES]
 
                 selected_batches = st.pills(
                     "Select Batches",
@@ -305,10 +236,7 @@ class studentInvolvement:
                     key="student_involvement_batch"
                 )
 
-                # Fetch all students from the selected batches.
-                available_students = self.getStudents(
-                    selected_batches
-                )
+                available_students = self.getStudents(selected_batches)
 
                 selected_students = (
                     st.multiselect(
@@ -316,8 +244,7 @@ class studentInvolvement:
                         available_students,
                         key="student_involvement_students"
                     )
-                    if selected_batches
-                    else []
+                    if selected_batches else []
                 )
 
                 team_name = st.text_input(
@@ -350,35 +277,19 @@ class studentInvolvement:
                 ])
 
                 if not proceed:
-                    st.caption(
-                        "Complete all required fields to preview "
-                        "the student involvement entry."
-                    )
+                    st.caption("Complete all required fields to preview the student involvement entry.")
 
             with col2:
                 if proceed:
-                    credits = self.calculateCredits(
-                        selected_students
-                    )
+                    credits = self.calculateCredits(selected_students)
 
                     st.subheader("Entry Details")
-
-                    st.write(
-                        f"**Batches:** {', '.join(selected_batches)}"
-                    )
-                    st.write(
-                        f"**Startup / Entrepreneurship:** {startup_name}"
-                    )
+                    st.write(f"**Batches:** {', '.join(selected_batches)}")
+                    st.write(f"**Startup / Entrepreneurship:** {startup_name}")
                     st.write(f"**Team Name:** {team_name}")
-
-                    st.write(
-                        "**Student Roll Numbers:** "
-                        f"{', '.join(selected_students)}"
-                    )
-
+                    st.write(f"**Student Roll Numbers:** {', '.join(selected_students)}")
                     st.write(f"**Description:** {description}")
                     st.write(f"**Proof URL:** {proof_url}")
-
                     st.info(f"Awarded Credits: {credits}")
 
                     if st.button(
@@ -389,26 +300,19 @@ class studentInvolvement:
                     ):
                         entry_df = pd.DataFrame([{
                             "batch": ", ".join(selected_batches),
-                            "student_name_roll_number": ",".join(
-                                selected_students
-                            ),
+                            "student_name_roll_number": ",".join(selected_students),
                             "team_name": team_name.strip(),
                             "description": description.strip(),
-                            "startup_enterpernurship_name": (
-                                startup_name.strip()
-                            ),
+                            "startup_enterpernurship_name": startup_name.strip(),
                             "proof_url": proof_url.strip(),
                             "awarded_credits": credits
                         }])
 
                         if self.insertDocuments(entry_df):
-                            st.success(
-                                "Student Involvement Added Successfully."
-                            )
+                            st.session_state["student_involvement_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Student Involvement Could Not Be Added."
-                            )
+                            st.warning("Student Involvement Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
