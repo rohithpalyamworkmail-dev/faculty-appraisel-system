@@ -76,12 +76,11 @@ class placements:
                     step=0.1,
                     required=True
                 ),
-                "student_names_roll_numbers":
-                    st.column_config.MultiselectColumn(
-                        "Students",
-                        options=students,
-                        required=True
-                    ),
+                "student_names_roll_numbers": st.column_config.MultiselectColumn(
+                    "Students",
+                    options=students,
+                    required=True
+                ),
                 "batch": "Batch",
                 "proof_url": "Proof URL",
                 "description": "Description",
@@ -104,14 +103,10 @@ class placements:
                 for _, row in edited_df.iterrows():
                     selected = (
                         row["student_names_roll_numbers"]
-                        if isinstance(
-                            row["student_names_roll_numbers"], list
-                        )
+                        if isinstance(row["student_names_roll_numbers"], list)
                         else [
                             x.strip()
-                            for x in str(
-                                row["student_names_roll_numbers"]
-                            ).split(",")
+                            for x in str(row["student_names_roll_numbers"]).split(",")
                             if x.strip()
                         ]
                     )
@@ -125,9 +120,7 @@ class placements:
                         "batch": row["batch"],
                         "proof_url": row["proof_url"],
                         "description": row["description"],
-                        "awarded_credits": self.calculateCredits(
-                            selected, package
-                        )
+                        "awarded_credits": self.calculateCredits(selected, package)
                     })
 
                 if self.db.replace_pending(pd.DataFrame(rows)):
@@ -158,9 +151,7 @@ class placements:
                 with st.container(border=True):
                     st.subheader(str(row["company"]))
                     st.write(f"**Batch:** {row['batch']}")
-                    st.write(
-                        f"**Students:** {row['student_names_roll_numbers']}"
-                    )
+                    st.write(f"**Students:** {row['student_names_roll_numbers']}")
                     st.write(f"**Package:** {row['package']} LPA")
                     st.write(f"**Description:** {row['description']}")
                     st.write(f"**Proof URL:** {row['proof_url']}")
@@ -168,44 +159,39 @@ class placements:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
                         st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("placements_reset", False):
+            st.session_state["placements_batch"] = None
+            st.session_state["placements_students"] = []
+            st.session_state["placements_company"] = ""
+            st.session_state["placements_package"] = 0.0
+            st.session_state["placements_description"] = ""
+            st.session_state["placements_proof_url"] = ""
+            st.toast("Placement Entry Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("Placement Entry")
 
-                mentees = st.session_state.get(
-                    "mentees_list", pd.DataFrame()
-                )
+                mentees = st.session_state.get("mentees_list", pd.DataFrame())
 
                 if mentees.empty:
-                    st.warning(
-                        "No mentees are assigned to this faculty."
-                    )
+                    st.warning("No mentees are assigned to this faculty.")
                 else:
                     batches = (
                         mentees["student_batch"]
@@ -219,28 +205,42 @@ class placements:
                         "Select Batch",
                         batches,
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="placements_batch"
                     )
 
                     selected_students = (
                         st.multiselect(
                             "Select Students",
-                            self.getStudents(selected_batch)
+                            self.getStudents(selected_batch),
+                            key="placements_students"
                         )
                         if selected_batch
                         else []
                     )
 
-                    company = st.text_input("Company")
+                    company = st.text_input(
+                        "Company",
+                        key="placements_company"
+                    )
+
                     package = st.number_input(
                         "Package (LPA)",
                         min_value=0.0,
-                        step=0.1
+                        step=0.1,
+                        key="placements_package"
                     )
-                    description = st.text_area("Description")
-                    proof_url = st.text_input("Proof URL")
 
-                    # Automatically validate all required fields.
+                    description = st.text_area(
+                        "Description",
+                        key="placements_description"
+                    )
+
+                    proof_url = st.text_input(
+                        "Proof URL",
+                        key="placements_proof_url"
+                    )
+
                     proceed = all([
                         selected_batch,
                         selected_students,
@@ -265,17 +265,13 @@ class placements:
 
             with col2:
                 if not mentees.empty and proceed:
-                    credits = self.calculateCredits(
-                        selected_students, package
-                    )
+                    credits = self.calculateCredits(selected_students, package)
 
                     st.subheader("Placement Details")
                     st.write(f"**Batch:** {selected_batch}")
                     st.write(f"**Company:** {company}")
                     st.write(f"**Package:** {package} LPA")
-                    st.write(
-                        f"**Students:** {', '.join(selected_students)}"
-                    )
+                    st.write(f"**Students:** {', '.join(selected_students)}")
                     st.write(f"**Description:** {description}")
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
@@ -289,9 +285,7 @@ class placements:
                         df = pd.DataFrame([{
                             "company": company,
                             "package": package,
-                            "student_names_roll_numbers": ",".join(
-                                selected_students
-                            ),
+                            "student_names_roll_numbers": ",".join(selected_students),
                             "batch": selected_batch,
                             "proof_url": proof_url,
                             "description": description,
@@ -299,11 +293,10 @@ class placements:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success("Placement Entry Added Successfully.")
+                            st.session_state["placements_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Placement Entry Could Not Be Added."
-                            )
+                            st.warning("Placement Entry Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
