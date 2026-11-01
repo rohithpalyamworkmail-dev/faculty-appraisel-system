@@ -172,6 +172,13 @@ class studentsFeedback:
             st.error(f"Feedback View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("students_feedback_reset", False):
+            st.session_state["students_feedback_semester"] = 1
+            st.session_state["students_feedback_subject_type"] = None
+            st.session_state["students_feedback_subject"] = None
+            st.session_state["students_feedback_score"] = 0
+            st.toast("Student Feedback Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -242,6 +249,7 @@ class studentsFeedback:
                                 .dropna()
                                 .unique()
                                 .tolist(),
+                                index=None,
                                 key="students_feedback_subject"
                             )
 
@@ -309,9 +317,10 @@ class studentsFeedback:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Student Feedback Added Successfully."
-                            )
+                            st.session_state[
+                                "students_feedback_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Student Feedback Could Not Be Added."
