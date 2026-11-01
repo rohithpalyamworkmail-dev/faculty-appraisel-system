@@ -207,7 +207,6 @@ class studentInvolvement:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-
         if st.session_state.pop("student_involvement_reset", False):
             st.session_state["student_involvement_batch"] = []
             st.session_state["student_involvement_students"] = []
@@ -215,7 +214,6 @@ class studentInvolvement:
             st.session_state["student_involvement_startup_name"] = ""
             st.session_state["student_involvement_description"] = ""
             st.session_state["student_involvement_proof_url"] = ""
-
             st.toast("Student Involvement Added Successfully!", icon="✅")
 
         tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
