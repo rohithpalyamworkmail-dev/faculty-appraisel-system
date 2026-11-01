@@ -112,6 +112,15 @@ class memberships:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("membership_reset", False):
+            st.session_state["membership_name"] = ""
+            st.session_state["membership_duration"] = 0.0
+            st.session_state["membership_issued_body"] = ""
+            st.session_state["membership_academic_year"] = ""
+            st.session_state["membership_description"] = ""
+            st.session_state["membership_proof_url"] = ""
+            st.toast("Membership Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -126,23 +135,38 @@ class memberships:
             with col1:
                 st.subheader("Membership Entry")
 
-                membership_name = st.text_input("Membership Name")
+                membership_name = st.text_input(
+                    "Membership Name",
+                    key="membership_name"
+                )
 
                 duration_in_years = st.number_input(
                     "Duration In Years",
                     min_value=0.0,
-                    step=0.5
+                    step=0.5,
+                    key="membership_duration"
                 )
 
-                issued_body_name = st.text_input("Issued Body Name")
+                issued_body_name = st.text_input(
+                    "Issued Body Name",
+                    key="membership_issued_body"
+                )
 
                 academic_year = st.text_input(
                     "Academic Year",
-                    placeholder="2026-2027"
+                    placeholder="2026-2027",
+                    key="membership_academic_year"
                 )
 
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
+                description = st.text_area(
+                    "Description",
+                    key="membership_description"
+                )
+
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="membership_proof_url"
+                )
 
                 proceed = True
 
@@ -198,7 +222,8 @@ class memberships:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success("Membership Added Successfully.")
+                            st.session_state["membership_reset"] = True
+                            st.rerun()
                         else:
                             st.warning("Membership Could Not Be Added.")
 
