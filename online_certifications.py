@@ -133,6 +133,18 @@ class onlineCertifications:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("online_certification_reset", False):
+            st.session_state["online_certification_type"] = None
+            st.session_state["online_certification_company"] = ""
+            st.session_state["online_certification_description"] = ""
+            st.session_state["online_certification_name"] = ""
+            st.session_state["online_certification_duration"] = 0
+            st.session_state["online_certification_proof_url"] = ""
+            st.toast(
+                "Online Certification Added Successfully!",
+                icon="✅"
+            )
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -151,7 +163,8 @@ class onlineCertifications:
                     "Certification Type",
                     ["NPTEL", "MNC", "Other"],
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="online_certification_type"
                 )
 
                 company = (
@@ -161,18 +174,32 @@ class onlineCertifications:
                 )
 
                 if certification_type in ["MNC", "Other"]:
-                    company = st.text_input("Company")
+                    company = st.text_input(
+                        "Company",
+                        key="online_certification_company"
+                    )
 
-                description = st.text_area("Description")
-                certification_name = st.text_input("Certification Name")
+                description = st.text_area(
+                    "Description",
+                    key="online_certification_description"
+                )
+
+                certification_name = st.text_input(
+                    "Certification Name",
+                    key="online_certification_name"
+                )
 
                 duration = st.number_input(
                     "Duration",
                     min_value=0,
-                    step=1
+                    step=1,
+                    key="online_certification_duration"
                 )
 
-                proof_url = st.text_input("Proof URL")
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="online_certification_proof_url"
+                )
 
                 proceed = True
 
@@ -233,9 +260,10 @@ class onlineCertifications:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Online Certification Added Successfully."
-                            )
+                            st.session_state[
+                                "online_certification_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Online Certification Could Not Be Added."
