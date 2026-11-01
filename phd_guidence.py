@@ -14,14 +14,7 @@ class phdGuidance:
             "DC Member/Viva Voce Examiner"
         ]
 
-    def calculateCredits(
-        self,
-        research_type,
-        external=False,
-        internal_full_time=False,
-        part_time=False,
-        full_time=False
-    ):
+    def calculateCredits(self, research_type, external=False, internal_full_time=False, part_time=False, full_time=False):
         if research_type == "Supervisor (Applicable In The Year Of Registration)":
             return 3
         if research_type == "Scholar Registration":
@@ -49,12 +42,7 @@ class phdGuidance:
                 st.info("No Ph.D Guidance entries are available for editing.")
                 return
 
-            for column in [
-                "external",
-                "internal_full_time",
-                "part_time",
-                "full_time"
-            ]:
+            for column in ["external", "internal_full_time", "part_time", "full_time"]:
                 df[column] = df[column].fillna(0).astype(bool)
 
             config = {
@@ -64,9 +52,7 @@ class phdGuidance:
                     required=True
                 ),
                 "external": st.column_config.CheckboxColumn("External"),
-                "internal_full_time": st.column_config.CheckboxColumn(
-                    "Internal & Full Time"
-                ),
+                "internal_full_time": st.column_config.CheckboxColumn("Internal & Full Time"),
                 "part_time": st.column_config.CheckboxColumn("Part Time"),
                 "full_time": st.column_config.CheckboxColumn("Full Time"),
                 "description": "Description",
@@ -90,26 +76,10 @@ class phdGuidance:
                 for _, row in edited_df.iterrows():
                     research_type = row["research_type"]
 
-                    external = (
-                        bool(row["external"])
-                        if research_type == "Scholar Registration"
-                        else False
-                    )
-                    internal_full_time = (
-                        bool(row["internal_full_time"])
-                        if research_type == "Scholar Registration"
-                        else False
-                    )
-                    part_time = (
-                        bool(row["part_time"])
-                        if research_type == "Scholar Completion"
-                        else False
-                    )
-                    full_time = (
-                        bool(row["full_time"])
-                        if research_type == "Scholar Completion"
-                        else False
-                    )
+                    external = bool(row["external"]) if research_type == "Scholar Registration" else False
+                    internal_full_time = bool(row["internal_full_time"]) if research_type == "Scholar Registration" else False
+                    part_time = bool(row["part_time"]) if research_type == "Scholar Completion" else False
+                    full_time = bool(row["full_time"]) if research_type == "Scholar Completion" else False
 
                     if research_type == "Scholar Registration":
                         if external:
@@ -169,19 +139,11 @@ class phdGuidance:
                     st.subheader(str(row["research_type"]))
 
                     if row["research_type"] == "Scholar Registration":
-                        scholar_type = (
-                            "External"
-                            if bool(row["external"])
-                            else "Internal & Full Time"
-                        )
+                        scholar_type = "External" if bool(row["external"]) else "Internal & Full Time"
                         st.write(f"**Scholar Type:** {scholar_type}")
 
                     if row["research_type"] == "Scholar Completion":
-                        scholar_type = (
-                            "Part Time"
-                            if bool(row["part_time"])
-                            else "Full Time"
-                        )
+                        scholar_type = "Part Time" if bool(row["part_time"]) else "Full Time"
                         st.write(f"**Scholar Type:** {scholar_type}")
 
                     st.write(f"**Description:** {row['description']}")
@@ -190,39 +152,38 @@ class phdGuidance:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
                         st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("phd_guidance_reset", False):
+            st.session_state["phd_guidance_research_type"] = self.research_types[0]
+            st.session_state["phd_guidance_registration_type"] = None
+            st.session_state["phd_guidance_completion_type"] = None
+            st.session_state["phd_guidance_description"] = ""
+            st.session_state["phd_guidance_proof_url"] = ""
+            st.toast("Ph.D Guidance Entry Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 1],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 1], border=True, gap="small")
 
             with col1:
                 st.subheader("Ph.D Guidance Entry")
 
                 research_type = st.radio(
                     "Research Type",
-                    self.research_types
+                    self.research_types,
+                    key="phd_guidance_research_type"
                 )
 
                 external = False
@@ -237,54 +198,48 @@ class phdGuidance:
                         "Scholar Registration Type",
                         ["External", "Internal & Full Time"],
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="phd_guidance_registration_type"
                     )
 
                     external = registration_type == "External"
-                    internal_full_time = (
-                        registration_type == "Internal & Full Time"
-                    )
+                    internal_full_time = registration_type == "Internal & Full Time"
 
                 if research_type == "Scholar Completion":
                     completion_type = st.pills(
                         "Scholar Completion Type",
                         ["Part Time", "Full Time"],
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="phd_guidance_completion_type"
                     )
 
                     part_time = completion_type == "Part Time"
                     full_time = completion_type == "Full Time"
 
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
+                description = st.text_area(
+                    "Description",
+                    key="phd_guidance_description"
+                )
 
-                # Automatically validate the required fields.
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="phd_guidance_proof_url"
+                )
+
                 proceed = all([
                     research_type,
-                    (
-                        research_type != "Scholar Registration"
-                        or registration_type
-                    ),
-                    (
-                        research_type != "Scholar Completion"
-                        or completion_type
-                    ),
+                    research_type != "Scholar Registration" or registration_type,
+                    research_type != "Scholar Completion" or completion_type,
                     description.strip(),
                     proof_url.strip()
                 ])
 
                 if not research_type:
                     st.warning("Please select Research Type.")
-                elif (
-                    research_type == "Scholar Registration"
-                    and not registration_type
-                ):
+                elif research_type == "Scholar Registration" and not registration_type:
                     st.warning("Please select Scholar Registration Type.")
-                elif (
-                    research_type == "Scholar Completion"
-                    and not completion_type
-                ):
+                elif research_type == "Scholar Completion" and not completion_type:
                     st.warning("Please select Scholar Completion Type.")
                 elif not description.strip():
                     st.warning("Please enter Description.")
@@ -305,19 +260,11 @@ class phdGuidance:
                     st.write(f"**Research Type:** {research_type}")
 
                     if research_type == "Scholar Registration":
-                        scholar_type = (
-                            "External"
-                            if external
-                            else "Internal & Full Time"
-                        )
+                        scholar_type = "External" if external else "Internal & Full Time"
                         st.write(f"**Scholar Type:** {scholar_type}")
 
                     if research_type == "Scholar Completion":
-                        scholar_type = (
-                            "Part Time"
-                            if part_time
-                            else "Full Time"
-                        )
+                        scholar_type = "Part Time" if part_time else "Full Time"
                         st.write(f"**Scholar Type:** {scholar_type}")
 
                     st.write(f"**Description:** {description}")
@@ -342,11 +289,10 @@ class phdGuidance:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success("Ph.D Guidance Entry Added Successfully.")
+                            st.session_state["phd_guidance_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Ph.D Guidance Entry Could Not Be Added."
-                            )
+                            st.warning("Ph.D Guidance Entry Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
