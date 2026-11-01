@@ -81,6 +81,18 @@ class arrangingOnCampusRecruitments:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("on_campus_recruitments_reset",False):
+            st.session_state["on_campus_recruitments_company"]=""
+            st.session_state["on_campus_recruitments_year"]=""
+            st.session_state["on_campus_recruitments_students"]=0
+            st.session_state["on_campus_recruitments_highest"]=0.0
+            st.session_state["on_campus_recruitments_average"]=0.0
+            st.session_state["on_campus_recruitments_principal"]=False
+            st.session_state["on_campus_recruitments_placement"]=False
+            st.session_state["on_campus_recruitments_admin"]=False
+            st.session_state["on_campus_recruitments_proof"]=""
+            st.toast("On-Campus Recruitment Entry Added Successfully!",icon="✅")
+
         tab_entry,tab_edit,tab_view=st.tabs(["Entry","Edit","View"])
 
         with tab_entry:
@@ -89,17 +101,16 @@ class arrangingOnCampusRecruitments:
 
             with col1:
                 st.subheader("Arrange On-Campus Recruitment")
-                company_name=st.text_input("Company Name")
-                academic_year=st.text_input("Academic Year",placeholder="2026-2027")
-                number_of_students_placed=st.number_input("Number Of Students Placed",min_value=0,step=1)
-                highest_package=st.number_input("Highest Package (LPA)",min_value=0.0,step=0.1)
-                average_package=st.number_input("Average Package (LPA)",min_value=0.0,step=0.1)
-                approval_of_principal=st.checkbox("Approval Of Principal")
-                approval_of_placement_cell=st.checkbox("Approval Of Placement Cell")
-                is_admin_approved=st.checkbox("Is Admin Approved")
-                proof_url=st.text_input("Proof URL")
+                company_name=st.text_input("Company Name",key="on_campus_recruitments_company")
+                academic_year=st.text_input("Academic Year",placeholder="2026-2027",key="on_campus_recruitments_year")
+                number_of_students_placed=st.number_input("Number Of Students Placed",min_value=0,step=1,key="on_campus_recruitments_students")
+                highest_package=st.number_input("Highest Package (LPA)",min_value=0.0,step=0.1,key="on_campus_recruitments_highest")
+                average_package=st.number_input("Average Package (LPA)",min_value=0.0,step=0.1,key="on_campus_recruitments_average")
+                approval_of_principal=st.checkbox("Approval Of Principal",key="on_campus_recruitments_principal")
+                approval_of_placement_cell=st.checkbox("Approval Of Placement Cell",key="on_campus_recruitments_placement")
+                is_admin_approved=st.checkbox("Is Admin Approved",key="on_campus_recruitments_admin")
+                proof_url=st.text_input("Proof URL",key="on_campus_recruitments_proof")
 
-                # Check toggle removed; validation runs automatically.
                 if not company_name.strip():st.warning("Please enter Company Name.")
                 elif not academic_year.strip():st.warning("Please enter Academic Year.")
                 elif number_of_students_placed<=0:st.warning("Please enter Number Of Students Placed.")
@@ -130,8 +141,11 @@ class arrangingOnCampusRecruitments:
                     if st.button("Add Entry",key="on_campus_recruitments_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"credits":3,"company_name":company_name,"academic_year":academic_year,"number_of_students_placed":int(number_of_students_placed),"highest_package":highest_package,"average_package":average_package,"approval_of_principal":int(approval_of_principal),"approval_of_placement_cell":int(approval_of_placement_cell),"is_admin_approved":"yes" if is_admin_approved else "no","proof_url":proof_url}])
 
-                        if self.insertDocuments(df):st.success("On-Campus Recruitment Added Successfully.")
-                        else:st.warning("On-Campus Recruitment Could Not Be Added.")
+                        if self.insertDocuments(df):
+                            st.session_state["on_campus_recruitments_reset"]=True
+                            st.rerun()
+                        else:
+                            st.warning("On-Campus Recruitment Could Not Be Added.")
 
         with tab_edit:self.edit_document()
         with tab_view:self.viewDocuments()
