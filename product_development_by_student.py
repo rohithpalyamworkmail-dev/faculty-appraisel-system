@@ -1,6 +1,6 @@
+
 import pandas as pd
 import streamlit as st
-
 from activity_database import ActivityDatabase
 from database import get_rows
 from global_fields import batches as GLOBAL_BATCHES
@@ -11,10 +11,6 @@ class productDevelopmentByStudent:
         self.db = ActivityDatabase("product_development_by_student")
 
     def getStudentOptions(self, batch=None):
-        """
-        Fetch all students from the selected batch in the logged-in
-        department. Return only student roll numbers, not names.
-        """
         department = st.session_state.get("department")
 
         if not department or not batch:
@@ -32,34 +28,23 @@ class productDevelopmentByStudent:
 
             students_df = pd.DataFrame(students)
 
-            # Support the database's existing column spelling.
             if "stuent_batch" in students_df.columns:
                 batch_column = "stuent_batch"
             elif "student_batch" in students_df.columns:
                 batch_column = "student_batch"
             else:
-                st.error(
-                    "The students table does not contain the expected "
-                    "batch column."
-                )
+                st.error("The students table does not contain the expected batch column.")
                 return []
 
             if "student_roll_number" not in students_df.columns:
-                st.error(
-                    "The students table does not contain "
-                    "student_roll_number."
-                )
+                st.error("The students table does not contain student_roll_number.")
                 return []
 
-            # Filter students by the selected batch.
             students_df = students_df[
-                students_df[batch_column]
-                .astype(str)
-                .str.strip()
+                students_df[batch_column].astype(str).str.strip()
                 == str(batch).strip()
             ]
 
-            # Return unique, non-empty roll numbers only.
             return (
                 students_df["student_roll_number"]
                 .dropna()
@@ -90,37 +75,25 @@ class productDevelopmentByStudent:
             )
 
             if df.empty:
-                st.info(
-                    "No Product Development entries are available for editing."
-                )
+                st.info("No Product Development entries are available for editing.")
                 return
 
-            # Use batches configured in global_fields.py.
-            all_batches = [
-                str(batch) for batch in GLOBAL_BATCHES
-            ]
+            all_batches = [str(batch) for batch in GLOBAL_BATCHES]
 
-            # Collect roll numbers from all configured batches.
-            students = list(
-                dict.fromkeys(
-                    roll_number
-                    for batch in all_batches
-                    for roll_number in self.getStudentOptions(batch)
-                )
-            )
+            students = list(dict.fromkeys(
+                roll_number
+                for batch in all_batches
+                for roll_number in self.getStudentOptions(batch)
+            ))
 
-            # Convert stored comma-separated roll numbers into lists
-            # for the Streamlit multiselect editor.
             df["students_names_roll_numbers"] = (
                 df["students_names_roll_numbers"]
                 .fillna("")
-                .apply(
-                    lambda value: [
-                        item.strip()
-                        for item in str(value).split(",")
-                        if item.strip()
-                    ]
-                )
+                .apply(lambda value: [
+                    item.strip()
+                    for item in str(value).split(",")
+                    if item.strip()
+                ])
             )
 
             config = {
@@ -131,20 +104,16 @@ class productDevelopmentByStudent:
                         required=True
                     ),
                 "team_name": st.column_config.TextColumn(
-                    "Team Name",
-                    required=True
+                    "Team Name", required=True
                 ),
                 "product_name": st.column_config.TextColumn(
-                    "Product Name",
-                    required=True
+                    "Product Name", required=True
                 ),
                 "product_description": st.column_config.TextColumn(
-                    "Product Description",
-                    required=True
+                    "Product Description", required=True
                 ),
                 "proof_url": st.column_config.TextColumn(
-                    "Proof URL",
-                    required=True
+                    "Proof URL", required=True
                 ),
                 "awarded_credits": st.column_config.NumberColumn(
                     "Awarded Credits"
@@ -161,12 +130,7 @@ class productDevelopmentByStudent:
                 key="product_development_editor"
             )
 
-            if st.toggle(
-                "Update",
-                key="product_development_update"
-            ):
-                # Convert the selected roll numbers back into the
-                # existing comma-separated database format.
+            if st.toggle("Update", key="product_development_update"):
                 edited_df["students_names_roll_numbers"] = (
                     edited_df["students_names_roll_numbers"].apply(
                         lambda value: ",".join(value)
@@ -178,13 +142,9 @@ class productDevelopmentByStudent:
                 edited_df["awarded_credits"] = 2
 
                 if self.db.replace_pending(edited_df):
-                    st.success(
-                        "Product Development Updated Successfully."
-                    )
+                    st.success("Product Development Updated Successfully.")
                 else:
-                    st.warning(
-                        "Product Development Could Not Be Updated."
-                    )
+                    st.warning("Product Development Could Not Be Updated.")
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -213,36 +173,35 @@ class productDevelopmentByStudent:
                     )
 
                     st.write(f"**Team Name:** {row['team_name']}")
-
-                    st.write(
-                        f"**Product Description:** "
-                        f"{row['product_description']}"
-                    )
-
+                    st.write(f"**Product Description:** {row['product_description']}")
                     st.write(f"**Proof URL:** {row['proof_url']}")
 
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** "
-                            f"{row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
-                        st.write(
-                            f"**HoD Approval:** {row['hod_approval']}"
-                        )
+                        st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+
+        if st.session_state.pop("product_development_reset", False):
+            st.session_state["product_development_batch"] = None
+            st.session_state["product_development_students"] = []
+            st.session_state["product_development_team_name"] = ""
+            st.session_state["product_development_product_name"] = ""
+            st.session_state["product_development_description"] = ""
+            st.session_state["product_development_proof_url"] = ""
+
+            st.toast("Product Development Entry Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -257,10 +216,7 @@ class productDevelopmentByStudent:
             with col1:
                 st.subheader("Product Development By Student")
 
-                # Batch pills come from global_fields.py.
-                batch_options = [
-                    str(batch) for batch in GLOBAL_BATCHES
-                ]
+                batch_options = [str(batch) for batch in GLOBAL_BATCHES]
 
                 selected_batch = st.pills(
                     "Select Batch",
@@ -270,10 +226,7 @@ class productDevelopmentByStudent:
                     key="product_development_batch"
                 )
 
-                # Display only roll numbers for the selected batch.
-                available_students = self.getStudentOptions(
-                    selected_batch
-                )
+                available_students = self.getStudentOptions(selected_batch)
 
                 selected_students = (
                     st.multiselect(
@@ -285,17 +238,26 @@ class productDevelopmentByStudent:
                     else []
                 )
 
-                team_name = st.text_input("Team Name")
-
-                product_name = st.text_input("Product Name")
-
-                product_description = st.text_area(
-                    "Product Description"
+                team_name = st.text_input(
+                    "Team Name",
+                    key="product_development_team_name"
                 )
 
-                proof_url = st.text_input("Proof URL")
+                product_name = st.text_input(
+                    "Product Name",
+                    key="product_development_product_name"
+                )
 
-                # Validate all required fields.
+                product_description = st.text_area(
+                    "Product Description",
+                    key="product_development_description"
+                )
+
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="product_development_proof_url"
+                )
+
                 proceed = all([
                     bool(selected_batch),
                     bool(selected_students),
@@ -307,47 +269,28 @@ class productDevelopmentByStudent:
 
                 if not selected_batch:
                     st.warning("Please select a Batch.")
-
                 elif not selected_students:
-                    st.warning(
-                        "Please select at least one Student."
-                    )
-
+                    st.warning("Please select at least one Student.")
                 elif not team_name.strip():
                     st.warning("Please enter the Team Name.")
-
                 elif not product_name.strip():
                     st.warning("Please enter the Product Name.")
-
                 elif not product_description.strip():
-                    st.warning(
-                        "Please enter the Product Description."
-                    )
-
+                    st.warning("Please enter the Product Description.")
                 elif not proof_url.strip():
                     st.warning("Please enter the Proof URL.")
 
             with col2:
                 if selected_batch and proceed:
-                    # Store only the selected roll numbers.
                     students = ",".join(selected_students)
 
                     st.subheader("Product Development Details")
-
                     st.write(f"**Batch:** {selected_batch}")
-                    st.write(
-                        f"**Student Roll Numbers:** {students}"
-                    )
+                    st.write(f"**Student Roll Numbers:** {students}")
                     st.write(f"**Team Name:** {team_name}")
                     st.write(f"**Product Name:** {product_name}")
-
-                    st.write(
-                        f"**Product Description:** "
-                        f"{product_description}"
-                    )
-
+                    st.write(f"**Product Description:** {product_description}")
                     st.write(f"**Proof URL:** {proof_url}")
-
                     st.info("Awarded Credits: 2")
 
                     if st.button(
@@ -366,13 +309,10 @@ class productDevelopmentByStudent:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Product Development Added Successfully."
-                            )
+                            st.session_state["product_development_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Product Development Could Not Be Added."
-                            )
+                            st.warning("Product Development Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
