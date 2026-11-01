@@ -126,6 +126,15 @@ class alumni:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("alumni_connection_reset",False):
+            st.session_state["alumni_connection_batches"]=[]
+            st.session_state["alumni_connection_students"]=[]
+            st.session_state["alumni_connection_type"]=self.types[0]
+            st.session_state["alumni_connection_title"]=""
+            st.session_state["alumni_connection_description"]=""
+            st.session_state["alumni_connection_proof"]=""
+            st.toast("Alumni Connection Entry Added Successfully!",icon="✅")
+
         tab_entry,tab_edit,tab_view=st.tabs(["Entry","Edit","View"])
 
         with tab_entry:
@@ -152,7 +161,6 @@ class alumni:
                 description=st.text_area("Description",key="alumni_connection_description")
                 proof_url=st.text_input("Proof URL",key="alumni_connection_proof")
 
-                # Check toggle removed; validation runs automatically.
                 if not selected_batches:st.warning("Please Select At Least One Batch.")
                 elif not selected_students:st.warning("Please Select At Least One Alumni.")
                 elif not activity_type:st.warning("Please Select Activity Type.")
@@ -183,8 +191,11 @@ class alumni:
                             st.warning("Record Already Exists.")
                         else:
                             df=pd.DataFrame([{"type":activity_type,"batch":batches_string,"student_name_roll_numbers":students_string,"title":title,"credits":credits,"description":description,"proof_url":proof_url}])
-                            if self.insertDocuments(df):st.success("Alumni Connection Entry Added Successfully.")
-                            else:st.warning("Alumni Connection Entry Could Not Be Added.")
+                            if self.insertDocuments(df):
+                                st.session_state["alumni_connection_reset"]=True
+                                st.rerun()
+                            else:
+                                st.warning("Alumni Connection Entry Could Not Be Added.")
 
         with tab_edit:self.edit_document()
         with tab_view:self.viewDocuments()
