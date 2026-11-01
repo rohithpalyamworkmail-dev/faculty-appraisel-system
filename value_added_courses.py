@@ -160,6 +160,15 @@ class valueAddedCourses:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("value_added_courses_reset", False):
+            st.session_state["value_added_courses_name"] = ""
+            st.session_state["value_added_courses_days"] = 5
+            st.session_state["value_added_courses_students"] = 25
+            st.session_state["value_added_courses_type"] = None
+            st.session_state["value_added_courses_description"] = ""
+            st.session_state["value_added_courses_proof_url"] = ""
+            st.toast("Value Added Course Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -212,7 +221,6 @@ class valueAddedCourses:
                     key="value_added_courses_proof_url"
                 )
 
-                # Automatically validate all required fields.
                 proceed = all([
                     course_name.strip(),
                     number_of_days >= 5,
@@ -261,9 +269,10 @@ class valueAddedCourses:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Value Added Course Added Successfully."
-                            )
+                            st.session_state[
+                                "value_added_courses_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Value Added Course Could Not Be Added."
