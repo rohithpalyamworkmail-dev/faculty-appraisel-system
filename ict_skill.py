@@ -30,9 +30,7 @@ class ictSkillRack:
             )
 
             if df.empty:
-                st.info(
-                    "No ICT / Skill Rack entries are available for editing."
-                )
+                st.info("No ICT / Skill Rack entries are available for editing.")
                 return
 
             config = {
@@ -56,19 +54,14 @@ class ictSkillRack:
             )
 
             if st.toggle("Update", key="ict_skill_rack_update"):
-                edited_df["awarded_credits"] = (
-                    edited_df["ict_skill_rack_target"]
-                    .apply(self.calculateCredits)
-                )
+                edited_df["awarded_credits"] = edited_df[
+                    "ict_skill_rack_target"
+                ].apply(self.calculateCredits)
 
                 if self.db.replace_pending(edited_df):
-                    st.success(
-                        "ICT / Skill Rack Entries Updated Successfully."
-                    )
+                    st.success("ICT / Skill Rack Entries Updated Successfully.")
                 else:
-                    st.warning(
-                        "ICT / Skill Rack Entries Could Not Be Updated."
-                    )
+                    st.warning("ICT / Skill Rack Entries Could Not Be Updated.")
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -94,32 +87,27 @@ class ictSkillRack:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
                         st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("ict_skill_rack_reset", False):
+            st.session_state["ict_skill_rack_target_input"] = None
+            st.session_state["ict_skill_rack_proof_url"] = ""
+            st.toast("ICT / Skill Rack Entry Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("ICT / Skill Rack Target")
@@ -128,10 +116,14 @@ class ictSkillRack:
                     "Select ICT / Skill Rack Target",
                     [">90%", "80 to 89.99%", "70 to 79.99%"],
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="ict_skill_rack_target_input"
                 )
 
-                proof_url = st.text_input("Proof URL")
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="ict_skill_rack_proof_url"
+                )
 
                 proceed = True
 
@@ -164,13 +156,10 @@ class ictSkillRack:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "ICT / Skill Rack Entry Added Successfully."
-                            )
+                            st.session_state["ict_skill_rack_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "ICT / Skill Rack Entry Could Not Be Added."
-                            )
+                            st.warning("ICT / Skill Rack Entry Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
