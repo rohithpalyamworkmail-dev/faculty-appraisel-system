@@ -122,6 +122,18 @@ class onlineCertifications4Weeks:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop(
+            "online_certifications_4weeks_reset", False
+        ):
+            st.session_state["online_certifications_4weeks_type"] = None
+            st.session_state["online_certifications_4weeks_name"] = ""
+            st.session_state["online_certifications_4weeks_duration"] = 4
+            st.session_state["online_certifications_4weeks_proof_url"] = ""
+            st.toast(
+                "Online Certification Entry Added Successfully!",
+                icon="✅"
+            )
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -140,18 +152,26 @@ class onlineCertifications4Weeks:
                     "Certificate Type",
                     self.certificate_types,
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="online_certifications_4weeks_type"
                 )
 
-                certificate_name = st.text_input("Certificate Name")
+                certificate_name = st.text_input(
+                    "Certificate Name",
+                    key="online_certifications_4weeks_name"
+                )
 
                 duration = st.number_input(
                     "Duration (Weeks)",
                     min_value=4,
-                    step=1
+                    step=1,
+                    key="online_certifications_4weeks_duration"
                 )
 
-                proof_url = st.text_input("Proof URL")
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="online_certifications_4weeks_proof_url"
+                )
 
                 proceed = True
 
@@ -197,9 +217,10 @@ class onlineCertifications4Weeks:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Online Certification Added Successfully."
-                            )
+                            st.session_state[
+                                "online_certifications_4weeks_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Online Certification Could Not Be Added."
