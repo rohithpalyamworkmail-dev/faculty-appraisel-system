@@ -10,10 +10,7 @@ class innovationInTeaching:
 
     def checkDocument(self, subject_type):
         try:
-            df = st.session_state.get(
-                "handling_subjects",
-                pd.DataFrame()
-            )
+            df = st.session_state.get("handling_subjects", pd.DataFrame())
 
             if df.empty:
                 return False
@@ -43,9 +40,7 @@ class innovationInTeaching:
             )
 
             if df.empty:
-                st.info(
-                    "No Innovation In Teaching entries are available for editing."
-                )
+                st.info("No Innovation In Teaching entries are available for editing.")
                 return
 
             config = {
@@ -66,20 +61,13 @@ class innovationInTeaching:
                 key="innovation_in_teaching_editor"
             )
 
-            if st.toggle(
-                "Update",
-                key="innovation_in_teaching_update"
-            ):
+            if st.toggle("Update", key="innovation_in_teaching_update"):
                 edited_df["awarded_credits"] = 2
 
                 if self.db.replace_pending(edited_df):
-                    st.success(
-                        "Innovation In Teaching Updated Successfully."
-                    )
+                    st.success("Innovation In Teaching Updated Successfully.")
                 else:
-                    st.warning(
-                        "Innovation In Teaching Could Not Be Updated."
-                    )
+                    st.warning("Innovation In Teaching Could Not Be Updated.")
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -106,38 +94,31 @@ class innovationInTeaching:
                     with col1:
                         st.write("**Problems Faced**")
                         st.write(row["problems_faced"])
-
                         st.write("**Innovation**")
                         st.write(row["innovation"])
 
                     with col2:
                         st.write("**Proof URL**")
                         st.write(row["proof_url"])
-
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
-                        st.write(
-                            f"**HoD Approval:** {row['hod_approval']}"
-                        )
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
+                        st.write(f"**HoD Approval:** {row['hod_approval']}")
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("innovation_in_teaching_reset", False):
+            st.session_state["innovation_in_teaching_subject"] = None
+            st.session_state["innovation_in_teaching_problems"] = ""
+            st.session_state["innovation_in_teaching_innovation"] = ""
+            st.session_state["innovation_in_teaching_proof"] = ""
+            st.toast("Innovation In Teaching Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             subjects_df = st.session_state.get(
                 "handling_subjects",
@@ -154,10 +135,7 @@ class innovationInTeaching:
                 st.subheader("Innovation In Teaching Entry")
 
                 if subjects_df.empty:
-                    st.warning(
-                        "No subjects are assigned to this faculty."
-                    )
-
+                    st.warning("No subjects are assigned to this faculty.")
                 else:
                     subject_types = (
                         subjects_df["subject_type"]
@@ -170,35 +148,39 @@ class innovationInTeaching:
                         "Select Subject Type",
                         subject_types,
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="innovation_in_teaching_subject"
                     )
 
-                    problems_faced = st.text_area("Problems Faced")
-                    innovation = st.text_area("Innovation")
-                    proof_url = st.text_input("Proof URL")
+                    problems_faced = st.text_area(
+                        "Problems Faced",
+                        key="innovation_in_teaching_problems"
+                    )
+                    innovation = st.text_area(
+                        "Innovation",
+                        key="innovation_in_teaching_innovation"
+                    )
+                    proof_url = st.text_input(
+                        "Proof URL",
+                        key="innovation_in_teaching_proof"
+                    )
 
                     proceed = True
 
                     if not subject_type:
                         st.info("Please select a Subject Type.")
                         proceed = False
-
                     elif not problems_faced.strip():
                         st.info("Please enter the Problems Faced.")
                         proceed = False
-
                     elif not innovation.strip():
                         st.info("Please enter the Innovation.")
                         proceed = False
-
                     elif not proof_url.strip():
                         st.info("Please enter the Proof URL.")
                         proceed = False
-
                     elif not self.checkDocument(subject_type):
-                        st.error(
-                            "You are not assigned to this Subject Type."
-                        )
+                        st.error("You are not assigned to this Subject Type.")
                         proceed = False
 
             with col2:
@@ -225,13 +207,10 @@ class innovationInTeaching:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Innovation In Teaching Added Successfully."
-                            )
+                            st.session_state["innovation_in_teaching_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Innovation In Teaching Could Not Be Added."
-                            )
+                            st.warning("Innovation In Teaching Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
