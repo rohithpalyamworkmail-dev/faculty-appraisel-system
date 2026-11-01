@@ -30,40 +30,18 @@ class facultyExchange:
             )
 
             if df.empty:
-                st.info(
-                    "No Faculty Exchange entries are available for editing."
-                )
+                st.info("No Faculty Exchange entries are available for editing.")
                 return
 
             config = {
-                "exchange_faculty_name": st.column_config.TextColumn(
-                    "Exchange Faculty Name",
-                    required=True
-                ),
-                "designation": st.column_config.TextColumn(
-                    "Designation",
-                    required=True
-                ),
-                "employer": st.column_config.TextColumn(
-                    "Employer",
-                    required=True
-                ),
-                "type": st.column_config.SelectboxColumn(
-                    "Type",
-                    options=self.exchange_types,
-                    required=True
-                ),
-                "number_of_days": st.column_config.NumberColumn(
-                    "Number Of Days",
-                    min_value=1,
-                    step=1,
-                    required=True
-                ),
+                "exchange_faculty_name": st.column_config.TextColumn("Exchange Faculty Name", required=True),
+                "designation": st.column_config.TextColumn("Designation", required=True),
+                "employer": st.column_config.TextColumn("Employer", required=True),
+                "type": st.column_config.SelectboxColumn("Type", options=self.exchange_types, required=True),
+                "number_of_days": st.column_config.NumberColumn("Number Of Days", min_value=1, step=1, required=True),
                 "proof_url": st.column_config.LinkColumn("Proof URL"),
                 "description": st.column_config.TextColumn("Description"),
-                "awarded_credits": st.column_config.NumberColumn(
-                    "Awarded Credits"
-                )
+                "awarded_credits": st.column_config.NumberColumn("Awarded Credits")
             }
 
             edited_df = st.data_editor(
@@ -77,33 +55,22 @@ class facultyExchange:
             )
 
             if st.toggle("Update", key="faculty_exchange_update"):
-                edited_df["number_of_days"] = (
-                    pd.to_numeric(
-                        edited_df["number_of_days"],
-                        errors="coerce"
-                    )
-                    .fillna(0)
-                    .astype(int)
-                )
+                edited_df["number_of_days"] = pd.to_numeric(
+                    edited_df["number_of_days"], errors="coerce"
+                ).fillna(0).astype(int)
 
                 if (edited_df["number_of_days"] <= 0).any():
-                    st.warning(
-                        "Number Of Days must be greater than 0."
-                    )
+                    st.warning("Number Of Days must be greater than 0.")
                     return
 
-                edited_df["awarded_credits"] = (
-                    edited_df["type"].apply(self.calculateCredits)
+                edited_df["awarded_credits"] = edited_df["type"].apply(
+                    self.calculateCredits
                 )
 
                 if self.db.replace_pending(edited_df):
-                    st.success(
-                        "Faculty Exchange Entries Updated Successfully."
-                    )
+                    st.success("Faculty Exchange Entries Updated Successfully.")
                 else:
-                    st.warning(
-                        "Faculty Exchange Entries Could Not Be Updated."
-                    )
+                    st.warning("Faculty Exchange Entries Could Not Be Updated.")
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -135,82 +102,89 @@ class facultyExchange:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
                         st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("faculty_exchange_reset", False):
+            st.session_state["faculty_exchange_name"] = ""
+            st.session_state["faculty_exchange_designation"] = ""
+            st.session_state["faculty_exchange_employer"] = ""
+            st.session_state["faculty_exchange_type"] = None
+            st.session_state["faculty_exchange_days"] = 1
+            st.session_state["faculty_exchange_proof"] = ""
+            st.session_state["faculty_exchange_description"] = ""
+            st.toast("Faculty Exchange Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("Faculty Exchange Entry")
 
                 exchange_faculty_name = st.text_input(
-                    "Exchange Faculty Name"
+                    "Exchange Faculty Name",
+                    key="faculty_exchange_name"
                 )
-                designation = st.text_input("Designation")
-                employer = st.text_input("Employer")
+                designation = st.text_input(
+                    "Designation",
+                    key="faculty_exchange_designation"
+                )
+                employer = st.text_input(
+                    "Employer",
+                    key="faculty_exchange_employer"
+                )
 
                 exchange_type = st.pills(
                     "Type",
                     self.exchange_types,
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="faculty_exchange_type"
                 )
 
                 number_of_days = st.number_input(
                     "Number Of Days",
                     min_value=1,
-                    step=1
+                    step=1,
+                    key="faculty_exchange_days"
                 )
 
-                proof_url = st.text_input("Proof URL")
-                description = st.text_area("Description")
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="faculty_exchange_proof"
+                )
+                description = st.text_area(
+                    "Description",
+                    key="faculty_exchange_description"
+                )
 
-                # Automatically validate inputs without a Check toggle.
                 proceed = False
 
                 if not exchange_faculty_name.strip():
                     st.info("Please enter Exchange Faculty Name.")
-
                 elif not designation.strip():
                     st.info("Please enter Designation.")
-
                 elif not employer.strip():
                     st.info("Please enter Employer.")
-
                 elif not exchange_type:
                     st.info("Please select Type.")
-
                 elif number_of_days <= 0:
                     st.info("Please enter valid Number Of Days.")
-
                 elif not proof_url.strip():
                     st.info("Please enter Proof URL.")
-
                 elif not description.strip():
                     st.info("Please enter Description.")
-
                 else:
                     proceed = True
 
@@ -219,9 +193,7 @@ class facultyExchange:
                     credits = self.calculateCredits(exchange_type)
 
                     st.subheader("Faculty Exchange Details")
-                    st.write(
-                        f"**Exchange Faculty Name:** {exchange_faculty_name}"
-                    )
+                    st.write(f"**Exchange Faculty Name:** {exchange_faculty_name}")
                     st.write(f"**Designation:** {designation}")
                     st.write(f"**Employer:** {employer}")
                     st.write(f"**Type:** {exchange_type}")
@@ -249,13 +221,10 @@ class facultyExchange:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Faculty Exchange Added Successfully."
-                            )
+                            st.session_state["faculty_exchange_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Faculty Exchange Could Not Be Added."
-                            )
+                            st.warning("Faculty Exchange Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
