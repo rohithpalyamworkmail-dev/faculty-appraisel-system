@@ -125,6 +125,19 @@ class organizingInternationalConference:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop(
+            "organizing_international_conference_reset", False
+        ):
+            st.session_state["organizing_conference_name"] = ""
+            st.session_state["organizing_conference_partner"] = None
+            st.session_state["organizing_conference_scopus"] = False
+            st.session_state["organizing_conference_description"] = ""
+            st.session_state["organizing_conference_proof_url"] = ""
+            st.toast(
+                "International Conference Entry Added Successfully!",
+                icon="✅"
+            )
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -139,18 +152,34 @@ class organizingInternationalConference:
             with col1:
                 st.subheader("Organizing International Conference")
 
-                conference_name = st.text_input("Conference Name")
+                conference_name = st.text_input(
+                    "Conference Name",
+                    key="organizing_conference_name"
+                )
+
                 partner = st.pills(
                     "Partner",
                     self.entry_partners,
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="organizing_conference_partner"
                 )
-                scopused_in_index = st.checkbox("Scopus Indexed")
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
 
-                # Automatically validate the input fields.
+                scopused_in_index = st.checkbox(
+                    "Scopus Indexed",
+                    key="organizing_conference_scopus"
+                )
+
+                description = st.text_area(
+                    "Description",
+                    key="organizing_conference_description"
+                )
+
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="organizing_conference_proof_url"
+                )
+
                 proceed = all([
                     conference_name.strip(),
                     partner,
@@ -196,9 +225,10 @@ class organizingInternationalConference:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "International Conference Added Successfully."
-                            )
+                            st.session_state[
+                                "organizing_international_conference_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "International Conference Could Not Be Added."
