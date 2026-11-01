@@ -142,6 +142,18 @@ class newsLettersAndMagazine:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop(
+            "news_letters_and_magazines_reset", False
+        ):
+            st.session_state["news_letters_magazines_type"] = None
+            st.session_state["news_letters_magazines_name"] = ""
+            st.session_state["news_letters_magazines_description"] = ""
+            st.session_state["news_letters_magazines_proof_url"] = ""
+            st.toast(
+                "News Letter / Magazine Added Successfully!",
+                icon="✅"
+            )
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -160,12 +172,24 @@ class newsLettersAndMagazine:
                     "Type",
                     self.types,
                     horizontal=True,
-                    index=None
+                    index=None,
+                    key="news_letters_magazines_type"
                 )
 
-                name = st.text_input("Name")
-                description = st.text_input("Description")
-                proof_url = st.text_input("Proof URL")
+                name = st.text_input(
+                    "Name",
+                    key="news_letters_magazines_name"
+                )
+
+                description = st.text_input(
+                    "Description",
+                    key="news_letters_magazines_description"
+                )
+
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="news_letters_magazines_proof_url"
+                )
 
                 proceed = True
 
@@ -218,9 +242,10 @@ class newsLettersAndMagazine:
                             }])
 
                             if self.insertDocuments(df):
-                                st.success(
-                                    "News Letter / Magazine Added Successfully."
-                                )
+                                st.session_state[
+                                    "news_letters_and_magazines_reset"
+                                ] = True
+                                st.rerun()
                             else:
                                 st.warning(
                                     "News Letter / Magazine Could Not Be Added."
