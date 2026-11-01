@@ -113,6 +113,16 @@ class specialAwardsFellowships:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop(
+            "special_awards_fellowships_reset", False
+        ):
+            st.session_state["special_awards_fellowships_type"] = None
+            st.session_state["special_awards_fellowships_name"] = ""
+            st.session_state["special_awards_fellowships_institution"] = ""
+            st.session_state["special_awards_fellowships_description"] = ""
+            st.session_state["special_awards_fellowships_proof_url"] = ""
+            st.toast("Special Award/Fellowship Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -155,7 +165,6 @@ class specialAwardsFellowships:
                     key="special_awards_fellowships_proof_url"
                 )
 
-                # Automatically validate all required fields.
                 proceed = all([
                     award_type,
                     name.strip(),
@@ -200,9 +209,10 @@ class specialAwardsFellowships:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Special Award/Fellowship Added Successfully."
-                            )
+                            st.session_state[
+                                "special_awards_fellowships_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Special Award/Fellowship Could Not Be Added."
