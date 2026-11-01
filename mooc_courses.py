@@ -97,6 +97,14 @@ class moocCourses:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("mooc_courses_reset", False):
+            st.session_state["mooc_courses_name"] = ""
+            st.session_state["mooc_courses_duration"] = ""
+            st.session_state["mooc_courses_uploaded_in"] = ""
+            st.session_state["mooc_courses_proof_url"] = ""
+            st.session_state["mooc_courses_description"] = ""
+            st.toast("MOOC Course Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -111,11 +119,30 @@ class moocCourses:
             with col1:
                 st.subheader("MOOC Course Entry")
 
-                course_name = st.text_input("Course Name")
-                duration = st.text_input("Duration")
-                uploaded_in = st.text_input("Uploaded In")
-                proof_url = st.text_input("Proof URL")
-                description = st.text_input("Description")
+                course_name = st.text_input(
+                    "Course Name",
+                    key="mooc_courses_name"
+                )
+
+                duration = st.text_input(
+                    "Duration",
+                    key="mooc_courses_duration"
+                )
+
+                uploaded_in = st.text_input(
+                    "Uploaded In",
+                    key="mooc_courses_uploaded_in"
+                )
+
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="mooc_courses_proof_url"
+                )
+
+                description = st.text_input(
+                    "Description",
+                    key="mooc_courses_description"
+                )
 
                 proceed = True
 
@@ -165,7 +192,8 @@ class moocCourses:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success("MOOC Course Added Successfully.")
+                            st.session_state["mooc_courses_reset"] = True
+                            st.rerun()
                         else:
                             st.warning("MOOC Course Could Not Be Added.")
 
