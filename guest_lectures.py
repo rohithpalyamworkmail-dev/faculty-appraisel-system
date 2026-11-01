@@ -34,18 +34,9 @@ class guestLectures:
                 return
 
             config = {
-                "institute_type": st.column_config.SelectboxColumn(
-                    "Institute Type",
-                    options=self.institute_types,
-                    required=True
-                ),
+                "institute_type": st.column_config.SelectboxColumn("Institute Type", options=self.institute_types, required=True),
                 "institution_name": "Institution Name",
-                "number_of_days": st.column_config.NumberColumn(
-                    "Number Of Days",
-                    min_value=1,
-                    step=1,
-                    required=True
-                ),
+                "number_of_days": st.column_config.NumberColumn("Number Of Days", min_value=1, step=1, required=True),
                 "topics_covered": "Topics Covered",
                 "description": "Description",
                 "proof_url": "Proof URL",
@@ -63,9 +54,7 @@ class guestLectures:
             )
 
             if st.toggle("Update", key="guest_lectures_update"):
-                edited_df["number_of_days"] = (
-                    edited_df["number_of_days"].fillna(1).astype(int)
-                )
+                edited_df["number_of_days"] = edited_df["number_of_days"].fillna(1).astype(int)
 
                 edited_df["awarded_credits"] = edited_df.apply(
                     lambda row: self.calculateCredits(
@@ -121,16 +110,19 @@ class guestLectures:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("guest_lectures_reset", False):
+            st.session_state["guest_lectures_institute_type"] = None
+            st.session_state["guest_lectures_institution_name"] = ""
+            st.session_state["guest_lectures_number_of_days"] = 1
+            st.session_state["guest_lectures_topics_covered"] = ""
+            st.session_state["guest_lectures_description"] = ""
+            st.session_state["guest_lectures_proof_url"] = ""
+            st.toast("Guest Lecture Entry Added Successfully.", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("Guest Lecture Entry")
@@ -139,18 +131,32 @@ class guestLectures:
                     "Institute Type",
                     self.institute_types,
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="guest_lectures_institute_type"
                 )
 
-                institution_name = st.text_input("Institution Name")
+                institution_name = st.text_input(
+                    "Institution Name",
+                    key="guest_lectures_institution_name"
+                )
                 number_of_days = st.number_input(
                     "Number Of Days",
                     min_value=1,
-                    step=1
+                    step=1,
+                    key="guest_lectures_number_of_days"
                 )
-                topics_covered = st.text_area("Topics Covered")
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
+                topics_covered = st.text_area(
+                    "Topics Covered",
+                    key="guest_lectures_topics_covered"
+                )
+                description = st.text_area(
+                    "Description",
+                    key="guest_lectures_description"
+                )
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="guest_lectures_proof_url"
+                )
 
                 proceed = True
 
@@ -175,10 +181,7 @@ class guestLectures:
 
             with col2:
                 if proceed:
-                    credits = self.calculateCredits(
-                        institute_type,
-                        number_of_days
-                    )
+                    credits = self.calculateCredits(institute_type, number_of_days)
 
                     st.subheader("Guest Lecture Details")
                     st.write(f"**Institute Type:** {institute_type}")
@@ -206,13 +209,10 @@ class guestLectures:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Guest Lecture Entry Added Successfully."
-                            )
+                            st.session_state["guest_lectures_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Guest Lecture Entry Could Not Be Added."
-                            )
+                            st.warning("Guest Lecture Entry Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
