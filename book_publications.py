@@ -67,6 +67,16 @@ class bookPublications:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("book_publications_reset",False):
+            st.session_state["book_publications_name"]=""
+            st.session_state["book_publications_category"]=None
+            st.session_state["book_publications_publisher"]=""
+            st.session_state["book_publications_year"]=1900
+            st.session_state["book_publications_author"]=None
+            st.session_state["book_publications_description"]=""
+            st.session_state["book_publications_proof"]=""
+            st.toast("Book Publication Added Successfully!",icon="✅")
+
         tab_entry,tab_edit,tab_view=st.tabs(["Entry","Edit","View"])
 
         with tab_entry:
@@ -75,13 +85,13 @@ class bookPublications:
 
             with col1:
                 st.subheader("Book Publication Entry")
-                book_name=st.text_input("Book Name")
-                book_category=st.pills("Book Category",["Group1","Group2","Other"],selection_mode="single",wrap=True)
-                publisher_name=st.text_input("Publisher Name")
-                published_year=st.number_input("Published Year",min_value=1900,step=1)
-                author_type=st.pills("Author Type",["Author","Co-Author"],selection_mode="single",wrap=True)
-                description=st.text_area("Description")
-                proof_url=st.text_input("Proof URL")
+                book_name=st.text_input("Book Name",key="book_publications_name")
+                book_category=st.pills("Book Category",["Group1","Group2","Other"],selection_mode="single",wrap=True,key="book_publications_category")
+                publisher_name=st.text_input("Publisher Name",key="book_publications_publisher")
+                published_year=st.number_input("Published Year",min_value=1900,step=1,key="book_publications_year")
+                author_type=st.pills("Author Type",["Author","Co-Author"],selection_mode="single",wrap=True,key="book_publications_author")
+                description=st.text_area("Description",key="book_publications_description")
+                proof_url=st.text_input("Proof URL",key="book_publications_proof")
 
                 if not book_name.strip():st.warning("Please enter Book Name.")
                 elif not book_category:st.warning("Please select Book Category.")
@@ -108,8 +118,11 @@ class bookPublications:
                     if st.button("Add Entry",key="book_publications_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"book_name":book_name,"book_category":book_category,"publisher_name":publisher_name,"published_year":int(published_year),"author_type":author_type,"proof_url":proof_url,"description":description,"awarded_credits":credits}])
 
-                        if self.insertDocuments(df):st.success("Book Publication Added Successfully.")
-                        else:st.warning("Book Publication Could Not Be Added.")
+                        if self.insertDocuments(df):
+                            st.session_state["book_publications_reset"]=True
+                            st.rerun()
+                        else:
+                            st.warning("Book Publication Could Not Be Added.")
 
         with tab_edit:self.edit_document()
         with tab_view:self.viewDocuments()
