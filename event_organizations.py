@@ -25,31 +25,16 @@ class eventsOrganizations:
             )
 
             if df.empty:
-                st.info(
-                    "No Event Organization entries are available for editing."
-                )
+                st.info("No Event Organization entries are available for editing.")
                 return
 
             config = {
-                "event_name": st.column_config.TextColumn(
-                    "Event Name", required=True
-                ),
-                "organized_with": st.column_config.TextColumn(
-                    "Organized With", required=True
-                ),
-                "number_of_days": st.column_config.NumberColumn(
-                    "Number Of Days",
-                    min_value=1,
-                    step=1,
-                    required=True
-                ),
+                "event_name": st.column_config.TextColumn("Event Name", required=True),
+                "organized_with": st.column_config.TextColumn("Organized With", required=True),
+                "number_of_days": st.column_config.NumberColumn("Number Of Days", min_value=1, step=1, required=True),
                 "proof_url": st.column_config.LinkColumn("Proof URL"),
-                "description": st.column_config.TextColumn(
-                    "Description", required=True
-                ),
-                "awarded_credits": st.column_config.NumberColumn(
-                    "Awarded Credits"
-                )
+                "description": st.column_config.TextColumn("Description", required=True),
+                "awarded_credits": st.column_config.NumberColumn("Awarded Credits")
             }
 
             edited_df = st.data_editor(
@@ -63,35 +48,22 @@ class eventsOrganizations:
             )
 
             if st.toggle("Update", key="event_organizations_update"):
-                edited_df["number_of_days"] = (
-                    pd.to_numeric(
-                        edited_df["number_of_days"],
-                        errors="coerce"
-                    )
-                    .fillna(0)
-                    .astype(int)
-                )
+                edited_df["number_of_days"] = pd.to_numeric(
+                    edited_df["number_of_days"], errors="coerce"
+                ).fillna(0).astype(int)
 
                 if (edited_df["number_of_days"] <= 0).any():
-                    st.warning(
-                        "Number Of Days must be greater than 0."
-                    )
+                    st.warning("Number Of Days must be greater than 0.")
                     return
 
-                edited_df["awarded_credits"] = (
-                    edited_df["number_of_days"].apply(
-                        self.calculateCredits
-                    )
+                edited_df["awarded_credits"] = edited_df["number_of_days"].apply(
+                    self.calculateCredits
                 )
 
                 if self.db.replace_pending(edited_df):
-                    st.success(
-                        "Event Organization Entries Updated Successfully."
-                    )
+                    st.success("Event Organization Entries Updated Successfully.")
                 else:
-                    st.warning(
-                        "Event Organization Entries Could Not Be Updated."
-                    )
+                    st.warning("Event Organization Entries Could Not Be Updated.")
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -121,66 +93,65 @@ class eventsOrganizations:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
                         st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("event_organizations_reset", False):
+            st.session_state["event_organizations_event_name"] = ""
+            st.session_state["event_organizations_organized_with"] = ""
+            st.session_state["event_organizations_number_of_days"] = 1
+            st.session_state["event_organizations_description"] = ""
+            st.session_state["event_organizations_proof_url"] = ""
+            st.toast("Event Organization Entry Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("Event Organization Entry")
 
-                event_name = st.text_input("Event Name")
-                organized_with = st.text_input("Organized With")
-
+                event_name = st.text_input(
+                    "Event Name", key="event_organizations_event_name"
+                )
+                organized_with = st.text_input(
+                    "Organized With", key="event_organizations_organized_with"
+                )
                 number_of_days = st.number_input(
                     "Number Of Days",
                     min_value=1,
-                    step=1
+                    step=1,
+                    key="event_organizations_number_of_days"
+                )
+                description = st.text_area(
+                    "Description", key="event_organizations_description"
+                )
+                proof_url = st.text_input(
+                    "Proof URL", key="event_organizations_proof_url"
                 )
 
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
-
-                # Automatically validate all required inputs.
                 proceed = False
 
                 if not event_name.strip():
                     st.info("Please enter Event Name.")
-
                 elif not organized_with.strip():
                     st.info("Please enter Organized With.")
-
                 elif number_of_days <= 0:
                     st.info("Please enter valid Number Of Days.")
-
                 elif not description.strip():
                     st.info("Please enter Description.")
-
                 elif not proof_url.strip():
                     st.info("Please enter Proof URL.")
-
                 else:
                     proceed = True
 
@@ -212,13 +183,10 @@ class eventsOrganizations:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Event Organization Added Successfully."
-                            )
+                            st.session_state["event_organizations_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Event Organization Could Not Be Added."
-                            )
+                            st.warning("Event Organization Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
