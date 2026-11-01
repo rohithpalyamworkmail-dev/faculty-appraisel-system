@@ -60,6 +60,13 @@ class citationImpacts:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("citation_impacts_reset",False):
+            st.session_state["citation_impacts_paper_name"]=""
+            st.session_state["citation_impacts_citations"]=0
+            st.session_state["citation_impacts_description"]=""
+            st.session_state["citation_impacts_proof_url"]=""
+            st.toast("Citation Impact Entry Added Successfully!",icon="✅")
+
         tab_entry,tab_edit,tab_view=st.tabs(["Entry","Edit","View"])
 
         with tab_entry:
@@ -68,10 +75,10 @@ class citationImpacts:
 
             with col1:
                 st.subheader("Citation Impact Entry")
-                paper_name=st.text_input("Paper Name")
-                number_of_citations=st.number_input("Number Of Citations",min_value=0,step=1)
-                description=st.text_area("Description")
-                proof_url=st.text_input("Proof URL")
+                paper_name=st.text_input("Paper Name",key="citation_impacts_paper_name")
+                number_of_citations=st.number_input("Number Of Citations",min_value=0,step=1,key="citation_impacts_citations")
+                description=st.text_area("Description",key="citation_impacts_description")
+                proof_url=st.text_input("Proof URL",key="citation_impacts_proof_url")
 
                 if not paper_name.strip():st.warning("Please enter Paper Name.")
                 elif number_of_citations<0:st.warning("Number Of Citations cannot be negative.")
@@ -94,8 +101,11 @@ class citationImpacts:
                     if st.button("Add Entry",key="citation_impacts_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"paper_name":paper_name,"number_of_citations":number_of_citations,"proof_url":proof_url,"description":description,"awarded_credits":credits}])
 
-                        if self.insertDocuments(df):st.success("Citation Impact Added Successfully.")
-                        else:st.warning("Citation Impact Could Not Be Added.")
+                        if self.insertDocuments(df):
+                            st.session_state["citation_impacts_reset"]=True
+                            st.rerun()
+                        else:
+                            st.warning("Citation Impact Could Not Be Added.")
 
         with tab_edit:self.edit_document()
         with tab_view:self.viewDocuments()
