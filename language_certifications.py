@@ -6,102 +6,43 @@ from activity_database import ActivityDatabase
 
 class languageCertifications:
     language_country = {
-        "English": "United Kingdom",
-        "Hindi": "India",
-        "Bengali": "Bangladesh",
-        "Spanish": "Spain",
-        "French": "France",
-        "Arabic": "Saudi Arabia",
-        "Portuguese": "Portugal",
-        "Russian": "Russia",
-        "Urdu": "Pakistan",
-        "German": "Germany",
-        "Japanese": "Japan",
-        "Korean": "South Korea",
-        "Chinese": "China",
-        "Italian": "Italy",
-        "Dutch": "Netherlands",
-        "Greek": "Greece",
-        "Turkish": "Turkey",
-        "Persian": "Iran",
-        "Hebrew": "Israel",
-        "Swedish": "Sweden",
-        "Norwegian": "Norway",
-        "Danish": "Denmark",
-        "Finnish": "Finland",
-        "Icelandic": "Iceland",
-        "Polish": "Poland",
-        "Czech": "Czech Republic",
-        "Slovak": "Slovakia",
-        "Hungarian": "Hungary",
-        "Romanian": "Romania",
-        "Bulgarian": "Bulgaria",
-        "Serbian": "Serbia",
-        "Croatian": "Croatia",
-        "Slovenian": "Slovenia",
-        "Ukrainian": "Ukraine",
-        "Lithuanian": "Lithuania",
-        "Latvian": "Latvia",
-        "Estonian": "Estonia",
-        "Albanian": "Albania",
-        "Macedonian": "North Macedonia",
-        "Bosnian": "Bosnia and Herzegovina",
-        "Malay": "Malaysia",
-        "Indonesian": "Indonesia",
-        "Thai": "Thailand",
-        "Vietnamese": "Vietnam",
-        "Filipino": "Philippines",
-        "Tamil": "India",
-        "Telugu": "India",
-        "Kannada": "India",
-        "Malayalam": "India",
-        "Marathi": "India",
-        "Gujarati": "India",
-        "Punjabi": "India",
-        "Odia": "India",
-        "Assamese": "India",
-        "Nepali": "Nepal",
-        "Sinhala": "Sri Lanka",
-        "Burmese": "Myanmar",
-        "Khmer": "Cambodia",
-        "Lao": "Laos",
-        "Mongolian": "Mongolia",
-        "Tibetan": "China",
-        "Kazakh": "Kazakhstan",
-        "Uzbek": "Uzbekistan",
-        "Turkmen": "Turkmenistan",
-        "Kyrgyz": "Kyrgyzstan",
-        "Tajik": "Tajikistan",
-        "Azerbaijani": "Azerbaijan",
-        "Armenian": "Armenia",
-        "Georgian": "Georgia",
-        "Swahili": "Kenya",
-        "Zulu": "South Africa",
-        "Xhosa": "South Africa",
-        "Afrikaans": "South Africa",
-        "Amharic": "Ethiopia",
-        "Somali": "Somalia",
-        "Hausa": "Nigeria",
-        "Yoruba": "Nigeria",
-        "Igbo": "Nigeria",
-        "Fula": "Senegal",
-        "Wolof": "Senegal",
-        "Kinyarwanda": "Rwanda",
-        "Kirundi": "Burundi",
-        "Malagasy": "Madagascar",
-        "Shona": "Zimbabwe",
-        "Sesotho": "Lesotho",
-        "Setswana": "Botswana",
-        "Tsonga": "South Africa",
-        "Tswana": "Botswana",
-        "Luxembourgish": "Luxembourg",
-        "Maltese": "Malta",
-        "Irish": "Ireland",
-        "Welsh": "United Kingdom",
-        "Scottish Gaelic": "United Kingdom",
-        "Basque": "Spain",
-        "Catalan": "Spain",
-        "Galician": "Spain",
+        "English": "United Kingdom", "Hindi": "India", "Bengali": "Bangladesh",
+        "Spanish": "Spain", "French": "France", "Arabic": "Saudi Arabia",
+        "Portuguese": "Portugal", "Russian": "Russia", "Urdu": "Pakistan",
+        "German": "Germany", "Japanese": "Japan", "Korean": "South Korea",
+        "Chinese": "China", "Italian": "Italy", "Dutch": "Netherlands",
+        "Greek": "Greece", "Turkish": "Turkey", "Persian": "Iran",
+        "Hebrew": "Israel", "Swedish": "Sweden", "Norwegian": "Norway",
+        "Danish": "Denmark", "Finnish": "Finland", "Icelandic": "Iceland",
+        "Polish": "Poland", "Czech": "Czech Republic", "Slovak": "Slovakia",
+        "Hungarian": "Hungary", "Romanian": "Romania", "Bulgarian": "Bulgaria",
+        "Serbian": "Serbia", "Croatian": "Croatia", "Slovenian": "Slovenia",
+        "Ukrainian": "Ukraine", "Lithuanian": "Lithuania", "Latvian": "Latvia",
+        "Estonian": "Estonia", "Albanian": "Albania",
+        "Macedonian": "North Macedonia", "Bosnian": "Bosnia and Herzegovina",
+        "Malay": "Malaysia", "Indonesian": "Indonesia", "Thai": "Thailand",
+        "Vietnamese": "Vietnam", "Filipino": "Philippines", "Tamil": "India",
+        "Telugu": "India", "Kannada": "India", "Malayalam": "India",
+        "Marathi": "India", "Gujarati": "India", "Punjabi": "India",
+        "Odia": "India", "Assamese": "India", "Nepali": "Nepal",
+        "Sinhala": "Sri Lanka", "Burmese": "Myanmar", "Khmer": "Cambodia",
+        "Lao": "Laos", "Mongolian": "Mongolia", "Tibetan": "China",
+        "Kazakh": "Kazakhstan", "Uzbek": "Uzbekistan",
+        "Turkmen": "Turkmenistan", "Kyrgyz": "Kyrgyzstan",
+        "Tajik": "Tajikistan", "Azerbaijani": "Azerbaijan",
+        "Armenian": "Armenia", "Georgian": "Georgia", "Swahili": "Kenya",
+        "Zulu": "South Africa", "Xhosa": "South Africa",
+        "Afrikaans": "South Africa", "Amharic": "Ethiopia",
+        "Somali": "Somalia", "Hausa": "Nigeria", "Yoruba": "Nigeria",
+        "Igbo": "Nigeria", "Fula": "Senegal", "Wolof": "Senegal",
+        "Kinyarwanda": "Rwanda", "Kirundi": "Burundi",
+        "Malagasy": "Madagascar", "Shona": "Zimbabwe",
+        "Sesotho": "Lesotho", "Setswana": "Botswana",
+        "Tsonga": "South Africa", "Tswana": "Botswana",
+        "Luxembourgish": "Luxembourg", "Maltese": "Malta",
+        "Irish": "Ireland", "Welsh": "United Kingdom",
+        "Scottish Gaelic": "United Kingdom", "Basque": "Spain",
+        "Catalan": "Spain", "Galician": "Spain",
         "Esperanto": "International"
     }
 
@@ -211,6 +152,11 @@ class languageCertifications:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("language_certification_reset", False):
+            st.session_state["language_certification_language"] = "English"
+            st.session_state["language_certification_proof"] = ""
+            st.toast("Language Certification Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -227,13 +173,17 @@ class languageCertifications:
 
                 language = st.selectbox(
                     "Select Language",
-                    list(self.language_country.keys())
+                    list(self.language_country.keys()),
+                    key="language_certification_language"
                 )
 
                 country = self.language_country.get(language, "")
                 st.info(f"Country: {country}")
 
-                proof_url = st.text_input("Proof URL")
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="language_certification_proof"
+                )
 
                 proceed = True
 
@@ -267,9 +217,10 @@ class languageCertifications:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Language Certification Added Successfully."
-                            )
+                            st.session_state[
+                                "language_certification_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Language Certification Could Not Be Added."
