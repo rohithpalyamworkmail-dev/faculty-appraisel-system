@@ -21,24 +21,14 @@ class extensionActivities:
             )
 
             if df.empty:
-                st.info(
-                    "No Extension Activity entries are available for editing."
-                )
+                st.info("No Extension Activity entries are available for editing.")
                 return
 
             config = {
-                "activity_name": st.column_config.TextColumn(
-                    "Activity Name",
-                    required=True
-                ),
-                "description": st.column_config.TextColumn(
-                    "Description",
-                    required=True
-                ),
+                "activity_name": st.column_config.TextColumn("Activity Name", required=True),
+                "description": st.column_config.TextColumn("Description", required=True),
                 "proof_url": st.column_config.LinkColumn("Proof URL"),
-                "awarded_credits": st.column_config.NumberColumn(
-                    "Awarded Credits"
-                )
+                "awarded_credits": st.column_config.NumberColumn("Awarded Credits")
             }
 
             edited_df = st.data_editor(
@@ -51,20 +41,13 @@ class extensionActivities:
                 key="extension_activities_editor"
             )
 
-            if st.toggle(
-                "Update",
-                key="extension_activities_update"
-            ):
+            if st.toggle("Update", key="extension_activities_update"):
                 edited_df["awarded_credits"] = 2
 
                 if self.db.replace_pending(edited_df):
-                    st.success(
-                        "Extension Activities Updated Successfully."
-                    )
+                    st.success("Extension Activities Updated Successfully.")
                 else:
-                    st.warning(
-                        "Extension Activities Could Not Be Updated."
-                    )
+                    st.warning("Extension Activities Could Not Be Updated.")
 
         except Exception as e:
             st.error(f"Edit Error: {e}")
@@ -91,69 +74,65 @@ class extensionActivities:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
                         st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("extension_activities_reset", False):
+            st.session_state["extension_activities_activity_name"] = ""
+            st.session_state["extension_activities_description"] = ""
+            st.session_state["extension_activities_proof_url"] = ""
+            st.toast("Extension Activity Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("Extension Activity Entry")
 
-                activity_name = st.text_input("Activity Name")
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
+                activity_name = st.text_input(
+                    "Activity Name",
+                    key="extension_activities_activity_name"
+                )
+                description = st.text_area(
+                    "Description",
+                    key="extension_activities_description"
+                )
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="extension_activities_proof_url"
+                )
 
-                # Automatically validate inputs without a Check toggle.
                 proceed = False
 
                 if not activity_name.strip():
                     st.info("Please enter Activity Name.")
-
                 elif not description.strip():
                     st.info("Please enter Description.")
-
                 elif not proof_url.strip():
                     st.info("Please enter Proof URL.")
-
                 else:
                     proceed = True
 
             with col2:
                 if proceed:
                     st.subheader("Extension Activity Details")
-
                     st.write(f"**Activity Name:** {activity_name}")
                     st.write(f"**Description:** {description}")
                     st.write(f"**Proof URL:** {proof_url}")
-
                     st.info("Awarded Credits: 2")
 
-                    if st.button(
-                        "Add Entry",
-                        key="extension_activities_add"
-                    ):
+                    if st.button("Add Entry", key="extension_activities_add"):
                         df = pd.DataFrame([{
                             "activity_name": activity_name,
                             "description": description,
@@ -162,13 +141,10 @@ class extensionActivities:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Extension Activity Added Successfully."
-                            )
+                            st.session_state["extension_activities_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Extension Activity Could Not Be Added."
-                            )
+                            st.warning("Extension Activity Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
