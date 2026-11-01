@@ -108,6 +108,14 @@ class specialAwards:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("special_awards_reset", False):
+            st.session_state["special_awards_name"] = ""
+            st.session_state["special_awards_received_from"] = None
+            st.session_state["special_awards_issuer"] = ""
+            st.session_state["special_awards_description"] = ""
+            st.session_state["special_awards_proof_url"] = ""
+            st.toast("Special Award Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -155,7 +163,6 @@ class specialAwards:
                     key="special_awards_proof_url"
                 )
 
-                # Automatically validate the required fields.
                 proceed = all([
                     award_name.strip(),
                     award_received_from,
@@ -199,9 +206,8 @@ class specialAwards:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Special Award Added Successfully."
-                            )
+                            st.session_state["special_awards_reset"] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Special Award Could Not Be Added."
