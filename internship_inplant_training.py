@@ -41,24 +41,14 @@ class internshipsInplantTraining:
             df = self.db.editable_dataframe(columns)
 
             if df.empty:
-                st.info(
-                    "No internship/in-plant training entries are available for editing."
-                )
+                st.info("No internship/in-plant training entries are available for editing.")
                 return
 
-            mentees = st.session_state.get(
-                "mentees_list",
-                pd.DataFrame()
-            )
-
+            mentees = st.session_state.get("mentees_list", pd.DataFrame())
             students = self.getStudents()
 
             batches = (
-                mentees["student_batch"]
-                .dropna()
-                .astype(str)
-                .unique()
-                .tolist()
+                mentees["student_batch"].dropna().astype(str).unique().tolist()
                 if not mentees.empty
                 else []
             )
@@ -66,38 +56,23 @@ class internshipsInplantTraining:
             df["students_names_roll_numbers"] = (
                 df["students_names_roll_numbers"]
                 .fillna("")
-                .apply(
-                    lambda x: [
-                        i.strip()
-                        for i in str(x).split(",")
-                        if i.strip()
-                    ]
-                )
+                .apply(lambda x: [i.strip() for i in str(x).split(",") if i.strip()])
             )
 
             df["stipend_offered"] = df["stipend_offered"].astype(bool)
 
             config = {
                 "students_names_roll_numbers": st.column_config.MultiselectColumn(
-                    "Students",
-                    options=students,
-                    required=True
+                    "Students", options=students, required=True
                 ),
                 "batch": st.column_config.SelectboxColumn(
-                    "Batch",
-                    options=batches,
-                    required=True
+                    "Batch", options=batches, required=True
                 ),
                 "company_name": "Company Name",
                 "duration_days": st.column_config.NumberColumn(
-                    "Duration (Days)",
-                    min_value=1,
-                    step=1,
-                    required=True
+                    "Duration (Days)", min_value=1, step=1, required=True
                 ),
-                "stipend_offered": st.column_config.CheckboxColumn(
-                    "Stipend Offered"
-                ),
+                "stipend_offered": st.column_config.CheckboxColumn("Stipend Offered"),
                 "proof_url": "Proof URL",
                 "awarded_credits": "Awarded Credits"
             }
@@ -118,15 +93,10 @@ class internshipsInplantTraining:
                 for _, row in edited_df.iterrows():
                     selected = (
                         row["students_names_roll_numbers"]
-                        if isinstance(
-                            row["students_names_roll_numbers"],
-                            list
-                        )
+                        if isinstance(row["students_names_roll_numbers"], list)
                         else [
                             x.strip()
-                            for x in str(
-                                row["students_names_roll_numbers"]
-                            ).split(",")
+                            for x in str(row["students_names_roll_numbers"]).split(",")
                             if x.strip()
                         ]
                     )
@@ -140,16 +110,11 @@ class internshipsInplantTraining:
                         "duration_days": int(row["duration_days"]),
                         "stipend_offered": int(stipend),
                         "proof_url": row["proof_url"],
-                        "awarded_credits": self.calculateCredits(
-                            selected,
-                            stipend
-                        )
+                        "awarded_credits": self.calculateCredits(selected, stipend)
                     })
 
                 if self.db.replace_pending(pd.DataFrame(rows)):
-                    st.success(
-                        "Internship/In-Plant Training Updated Successfully."
-                    )
+                    st.success("Internship/In-Plant Training Updated Successfully.")
                 else:
                     st.warning("Update Failed.")
 
@@ -167,9 +132,7 @@ class internshipsInplantTraining:
             df = self.db.dataframe(columns)
 
             if df.empty:
-                st.info(
-                    "No internship/in-plant training entries found."
-                )
+                st.info("No internship/in-plant training entries found.")
                 return
 
             st.subheader("Internship / In-Plant Training")
@@ -177,62 +140,48 @@ class internshipsInplantTraining:
             for _, row in df.iterrows():
                 with st.container(border=True):
                     st.subheader(str(row["company_name"]))
-
-                    st.write(
-                        f"**Students:** {row['students_names_roll_numbers']}"
-                    )
+                    st.write(f"**Students:** {row['students_names_roll_numbers']}")
                     st.write(f"**Batch:** {row['batch']}")
                     st.write(f"**Duration:** {row['duration_days']} days")
-                    st.write(
-                        f"**Stipend Offered:** "
-                        f"{'Yes' if row['stipend_offered'] else 'No'}"
-                    )
+                    st.write(f"**Stipend Offered:** {'Yes' if row['stipend_offered'] else 'No'}")
                     st.write(f"**Proof URL:** {row['proof_url']}")
 
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
-                        st.write(
-                            f"**HoD Approval:** {row['hod_approval']}"
-                        )
+                        st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("internship_training_reset", False):
+            st.session_state["internship_training_batch"] = None
+            st.session_state["internship_training_students"] = []
+            st.session_state["internship_training_company"] = ""
+            st.session_state["internship_training_duration"] = 1
+            st.session_state["internship_training_stipend"] = False
+            st.session_state["internship_training_proof"] = ""
+            st.toast("Internship/In-Plant Training Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("Internship / In-Plant Training")
 
-                mentees = st.session_state.get(
-                    "mentees_list",
-                    pd.DataFrame()
-                )
+                mentees = st.session_state.get("mentees_list", pd.DataFrame())
 
                 if mentees.empty:
-                    st.warning(
-                        "No mentees are assigned to this faculty."
-                    )
+                    st.warning("No mentees are assigned to this faculty.")
 
                 else:
                     batches = (
@@ -247,69 +196,70 @@ class internshipsInplantTraining:
                         "Select Batch",
                         batches,
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="internship_training_batch"
                     )
 
                     selected_students = (
                         st.multiselect(
                             "Select Students",
-                            self.getStudents(selected_batch)
+                            self.getStudents(selected_batch),
+                            key="internship_training_students"
                         )
                         if selected_batch
                         else []
                     )
 
-                    company_name = st.text_input("Company Name")
+                    company_name = st.text_input(
+                        "Company Name",
+                        key="internship_training_company"
+                    )
 
                     duration_days = st.number_input(
                         "Duration in Days",
                         min_value=1,
-                        step=1
+                        step=1,
+                        key="internship_training_duration"
                     )
 
-                    stipend_offered = st.checkbox("Stipend Offered")
-                    proof_url = st.text_input("Proof URL")
+                    stipend_offered = st.checkbox(
+                        "Stipend Offered",
+                        key="internship_training_stipend"
+                    )
+
+                    proof_url = st.text_input(
+                        "Proof URL",
+                        key="internship_training_proof"
+                    )
 
                     proceed = True
 
                     if not selected_batch:
                         st.info("Please select a Batch.")
                         proceed = False
-
                     elif not selected_students:
                         st.info("Please select at least one Student.")
                         proceed = False
-
                     elif not company_name.strip():
                         st.info("Please enter Company Name.")
                         proceed = False
-
                     elif duration_days <= 0:
                         st.info("Please enter a valid Duration.")
                         proceed = False
-
                     elif not proof_url.strip():
                         st.info("Please enter the Proof URL.")
                         proceed = False
 
             with col2:
                 if not mentees.empty and proceed:
-                    credits = self.calculateCredits(
-                        selected_students,
-                        stipend_offered
-                    )
+                    credits = self.calculateCredits(selected_students, stipend_offered)
 
                     st.subheader("Training Details")
                     st.write(f"**Company:** {company_name}")
-                    st.write(
-                        f"**Students:** {', '.join(selected_students)}"
-                    )
+                    st.write(f"**Students:** {', '.join(selected_students)}")
                     st.write(f"**Batch:** {selected_batch}")
                     st.write(f"**Duration:** {duration_days} days")
-                    st.write(
-                        f"**Stipend Offered:** "
-                        f"{'Yes' if stipend_offered else 'No'}"
-                    )
+                    st.write(f"**Stipend Offered:** {'Yes' if stipend_offered else 'No'}")
                     st.write(f"**Proof URL:** {proof_url}")
                     st.info(f"Awarded Credits: {credits}")
 
@@ -320,9 +270,7 @@ class internshipsInplantTraining:
                         width="stretch"
                     ):
                         df = pd.DataFrame([{
-                            "students_names_roll_numbers": ",".join(
-                                selected_students
-                            ),
+                            "students_names_roll_numbers": ",".join(selected_students),
                             "batch": selected_batch,
                             "company_name": company_name,
                             "duration_days": duration_days,
@@ -332,13 +280,10 @@ class internshipsInplantTraining:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Internship/In-Plant Training Added Successfully."
-                            )
+                            st.session_state["internship_training_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Internship/In-Plant Training Could Not Be Added."
-                            )
+                            st.warning("Internship/In-Plant Training Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
