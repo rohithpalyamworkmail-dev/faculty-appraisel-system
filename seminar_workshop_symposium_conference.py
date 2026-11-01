@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 
@@ -8,46 +9,24 @@ from global_fields import batches as GLOBAL_BATCHES
 
 class studentSeminarWorkshopConference:
     def __init__(self):
-        self.db = ActivityDatabase(
-            "seminar_workshop_conference_symposium_by_students"
-        )
+        self.db = ActivityDatabase("seminar_workshop_conference_symposium_by_students")
 
-    def calculateCredits(
-        self,
-        students,
-        participation_type,
-        result,
-        prize_position
-    ):
+    def calculateCredits(self, students, participation_type, result, prize_position):
         count = len(students)
 
         if participation_type == "National":
             if result == "Prize Winning":
-                return count * {
-                    1: 2,
-                    2: 1,
-                    3: 0.5
-                }.get(prize_position, 0)
-
+                return count * {1: 2, 2: 1, 3: 0.5}.get(prize_position, 0)
             return round(count * 0.1, 3)
 
         if participation_type == "International":
             if result == "Prize Winning":
-                return count * {
-                    1: 3,
-                    2: 2,
-                    3: 1
-                }.get(prize_position, 0)
-
+                return count * {1: 3, 2: 2, 3: 1}.get(prize_position, 0)
             return count * 0.2
 
         return 0
 
     def getStudents(self, selected_batches=None):
-        """
-        Fetch all students from the selected batches in the
-        logged-in department. Return only roll numbers.
-        """
         department = st.session_state.get("department")
 
         if not department or not selected_batches:
@@ -70,29 +49,17 @@ class studentSeminarWorkshopConference:
             elif "student_batch" in df.columns:
                 batch_column = "student_batch"
             else:
-                st.error(
-                    "The students table does not contain "
-                    "the expected batch column."
-                )
+                st.error("The students table does not contain the expected batch column.")
                 return []
 
             if "student_roll_number" not in df.columns:
-                st.error(
-                    "The students table does not contain "
-                    "student_roll_number."
-                )
+                st.error("The students table does not contain student_roll_number.")
                 return []
 
-            selected_batch_values = {
-                str(batch).strip()
-                for batch in selected_batches
-            }
+            selected_batch_values = {str(batch).strip() for batch in selected_batches}
 
             df = df[
-                df[batch_column]
-                .astype(str)
-                .str.strip()
-                .isin(selected_batch_values)
+                df[batch_column].astype(str).str.strip().isin(selected_batch_values)
             ]
 
             return (
@@ -126,17 +93,10 @@ class studentSeminarWorkshopConference:
             df = self.db.editable_dataframe(columns)
 
             if df.empty:
-                st.info(
-                    "No Seminar/Workshop/Conference entries are "
-                    "available for editing."
-                )
+                st.info("No Seminar/Workshop/Conference entries are available for editing.")
                 return
 
-            all_batches = [
-                str(batch) for batch in GLOBAL_BATCHES
-            ]
-
-            # Build the complete list of roll numbers across all batches.
+            all_batches = [str(batch) for batch in GLOBAL_BATCHES]
             all_students = self.getStudents(all_batches)
 
             df["name_roll_number"] = (
@@ -153,8 +113,7 @@ class studentSeminarWorkshopConference:
 
             df["prize_position"] = df.apply(
                 lambda row: (
-                    0
-                    if row["result"] == "Participation"
+                    0 if row["result"] == "Participation"
                     else int(row["prize_position"] or 0)
                 ),
                 axis=1
@@ -173,12 +132,7 @@ class studentSeminarWorkshopConference:
                 ),
                 "participated_in": st.column_config.SelectboxColumn(
                     "Participated In",
-                    options=[
-                        "seminar",
-                        "workshop",
-                        "symposium",
-                        "conference"
-                    ],
+                    options=["seminar", "workshop", "symposium", "conference"],
                     required=True
                 ),
                 "result": st.column_config.SelectboxColumn(
@@ -191,20 +145,14 @@ class studentSeminarWorkshopConference:
                     options=["National", "International"],
                     required=True
                 ),
-                "team_name": st.column_config.TextColumn(
-                    "Team Name"
-                ),
-                "proof_url": st.column_config.TextColumn(
-                    "Proof URL"
-                ),
+                "team_name": st.column_config.TextColumn("Team Name"),
+                "proof_url": st.column_config.TextColumn("Proof URL"),
                 "prize_position": st.column_config.SelectboxColumn(
                     "Prize Position",
                     options=[0, 1, 2, 3],
                     required=True
                 ),
-                "awarded_credits": st.column_config.NumberColumn(
-                    "Awarded Credits"
-                )
+                "awarded_credits": st.column_config.NumberColumn("Awarded Credits")
             }
 
             edited_df = st.data_editor(
@@ -217,10 +165,7 @@ class studentSeminarWorkshopConference:
                 key="student_seminar_editor"
             )
 
-            if st.toggle(
-                "Update",
-                key="student_seminar_update"
-            ):
+            if st.toggle("Update", key="student_seminar_update"):
                 rows = []
 
                 for _, row in edited_df.iterrows():
@@ -229,9 +174,7 @@ class studentSeminarWorkshopConference:
                         if isinstance(row["name_roll_number"], list)
                         else [
                             value.strip()
-                            for value in str(
-                                row["name_roll_number"]
-                            ).split(",")
+                            for value in str(row["name_roll_number"]).split(",")
                             if value.strip()
                         ]
                     )
@@ -239,8 +182,7 @@ class studentSeminarWorkshopConference:
                     result = row["result"]
 
                     position = (
-                        0
-                        if result == "Participation"
+                        0 if result == "Participation"
                         else int(row["prize_position"] or 0)
                     )
 
@@ -252,9 +194,7 @@ class studentSeminarWorkshopConference:
                     )
 
                     rows.append({
-                        "name_roll_number": ",".join(
-                            selected_students
-                        ),
+                        "name_roll_number": ",".join(selected_students),
                         "batch": row["batch"],
                         "participated_in": row["participated_in"],
                         "result": result,
@@ -266,9 +206,7 @@ class studentSeminarWorkshopConference:
                     })
 
                 if self.db.replace_pending(pd.DataFrame(rows)):
-                    st.success(
-                        "Seminar/Workshop/Conference Updated Successfully."
-                    )
+                    st.success("Seminar/Workshop/Conference Updated Successfully.")
                 else:
                     st.warning("Update Failed.")
 
@@ -286,37 +224,22 @@ class studentSeminarWorkshopConference:
             df = self.db.dataframe(columns)
 
             if df.empty:
-                st.info(
-                    "No Seminar/Workshop/Conference entries found."
-                )
+                st.info("No Seminar/Workshop/Conference entries found.")
                 return
 
-            st.subheader(
-                "Student Seminar / Workshop / Conference"
-            )
+            st.subheader("Student Seminar / Workshop / Conference")
 
             for _, row in df.iterrows():
                 with st.container(border=True):
-                    st.subheader(
-                        str(row["participated_in"]).title()
-                    )
+                    st.subheader(str(row["participated_in"]).title())
 
-                    st.write(
-                        f"**Student Roll Numbers:** "
-                        f"{row['name_roll_number']}"
-                    )
+                    st.write(f"**Student Roll Numbers:** {row['name_roll_number']}")
                     st.write(f"**Batch:** {row['batch']}")
                     st.write(f"**Result:** {row['result']}")
-
-                    st.write(
-                        f"**Participation Type:** "
-                        f"{row['participation_type']}"
-                    )
+                    st.write(f"**Participation Type:** {row['participation_type']}")
 
                     if row["result"] == "Prize Winning":
-                        st.write(
-                            f"**Prize Position:** {row['prize_position']}"
-                        )
+                        st.write(f"**Prize Position:** {row['prize_position']}")
 
                     st.write(f"**Team Name:** {row['team_name']}")
                     st.write(f"**Proof URL:** {row['proof_url']}")
@@ -324,45 +247,38 @@ class studentSeminarWorkshopConference:
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.write(
-                            f"**Awarded Credits:** "
-                            f"{row['awarded_credits']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
 
                     with col2:
-                        st.write(
-                            f"**HoD Approval:** {row['hod_approval']}"
-                        )
+                        st.write(f"**HoD Approval:** {row['hod_approval']}")
 
                     with col3:
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        st.subheader(
-            "Student Seminar / Workshop / Conference"
-        )
+        if st.session_state.pop("student_seminar_reset", False):
+            st.session_state["student_seminar_batches"] = []
+            st.session_state["student_seminar_students"] = []
+            st.session_state["student_seminar_result"] = None
+            st.session_state["student_seminar_prize_position"] = 1
+            st.session_state["student_seminar_participated_in"] = None
+            st.session_state["student_seminar_participation_type"] = None
+            st.session_state["student_seminar_team_name"] = ""
+            st.session_state["student_seminar_proof_url"] = ""
+            st.toast("Entry Added Successfully!", icon="✅")
 
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        st.subheader("Student Seminar / Workshop / Conference")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
-                # Batch pills use global_fields.py.
-                batch_options = [
-                    str(batch) for batch in GLOBAL_BATCHES
-                ]
+                batch_options = [str(batch) for batch in GLOBAL_BATCHES]
 
                 selected_batches = st.pills(
                     "Select Batches",
@@ -372,12 +288,8 @@ class studentSeminarWorkshopConference:
                     key="student_seminar_batches"
                 )
 
-                # Load all students from every selected batch.
-                available_students = self.getStudents(
-                    selected_batches
-                )
+                available_students = self.getStudents(selected_batches)
 
-                # Only roll numbers are displayed.
                 selected_students = (
                     st.multiselect(
                         "Select Student Roll Numbers",
@@ -392,13 +304,15 @@ class studentSeminarWorkshopConference:
                     "Result",
                     ["Participation", "Prize Winning"],
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="student_seminar_result"
                 )
 
                 prize_position = (
                     st.selectbox(
                         "Prize Position",
-                        [1, 2, 3]
+                        [1, 2, 3],
+                        key="student_seminar_prize_position"
                     )
                     if result == "Prize Winning"
                     else 0
@@ -406,25 +320,29 @@ class studentSeminarWorkshopConference:
 
                 participated_in = st.pills(
                     "Participated In",
-                    [
-                        "seminar",
-                        "workshop",
-                        "symposium",
-                        "conference"
-                    ],
+                    ["seminar", "workshop", "symposium", "conference"],
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="student_seminar_participated_in"
                 )
 
                 participation_type = st.pills(
                     "Participation Type",
                     ["National", "International"],
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="student_seminar_participation_type"
                 )
 
-                team_name = st.text_input("Team Name")
-                proof_url = st.text_input("Proof URL")
+                team_name = st.text_input(
+                    "Team Name",
+                    key="student_seminar_team_name"
+                )
+
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="student_seminar_proof_url"
+                )
 
                 proceed = all([
                     bool(selected_batches),
@@ -437,31 +355,17 @@ class studentSeminarWorkshopConference:
                 ])
 
                 if not selected_batches:
-                    st.warning(
-                        "Please select at least one Batch."
-                    )
-
+                    st.warning("Please select at least one Batch.")
                 elif not selected_students:
-                    st.warning(
-                        "Please select at least one Student."
-                    )
-
+                    st.warning("Please select at least one Student.")
                 elif not result:
                     st.warning("Please select the Result.")
-
                 elif not participated_in:
-                    st.warning(
-                        "Please select what the students participated in."
-                    )
-
+                    st.warning("Please select what the students participated in.")
                 elif not participation_type:
-                    st.warning(
-                        "Please select Participation Type."
-                    )
-
+                    st.warning("Please select Participation Type.")
                 elif not team_name.strip():
                     st.warning("Please enter the Team Name.")
-
                 elif not proof_url.strip():
                     st.warning("Please enter the Proof URL.")
 
@@ -476,29 +380,14 @@ class studentSeminarWorkshopConference:
 
                     st.subheader("Entry Details")
 
-                    st.write(
-                        f"**Batches:** {', '.join(selected_batches)}"
-                    )
-
-                    st.write(
-                        f"**Student Roll Numbers:** "
-                        f"{', '.join(selected_students)}"
-                    )
-
-                    st.write(
-                        f"**Participated In:** {participated_in}"
-                    )
+                    st.write(f"**Batches:** {', '.join(selected_batches)}")
+                    st.write(f"**Student Roll Numbers:** {', '.join(selected_students)}")
+                    st.write(f"**Participated In:** {participated_in}")
                     st.write(f"**Result:** {result}")
-
-                    st.write(
-                        f"**Participation Type:** "
-                        f"{participation_type}"
-                    )
+                    st.write(f"**Participation Type:** {participation_type}")
 
                     if result == "Prize Winning":
-                        st.write(
-                            f"**Prize Position:** {prize_position}"
-                        )
+                        st.write(f"**Prize Position:** {prize_position}")
 
                     st.write(f"**Team Name:** {team_name}")
                     st.write(f"**Proof URL:** {proof_url}")
@@ -511,9 +400,7 @@ class studentSeminarWorkshopConference:
                         width="stretch"
                     ):
                         df = pd.DataFrame([{
-                            "name_roll_number": ",".join(
-                                selected_students
-                            ),
+                            "name_roll_number": ",".join(selected_students),
                             "batch": ", ".join(selected_batches),
                             "participated_in": participated_in,
                             "result": result,
@@ -525,11 +412,10 @@ class studentSeminarWorkshopConference:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success("Entry Added Successfully.")
+                            st.session_state["student_seminar_reset"] = True
+                            st.rerun()
                         else:
-                            st.warning(
-                                "Entry Could Not Be Added."
-                            )
+                            st.warning("Entry Could Not Be Added.")
 
         with tab_edit:
             self.edit_document()
