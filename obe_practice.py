@@ -56,8 +56,7 @@ class obePractice:
 
             if st.toggle("Update", key="obe_practice_update"):
                 edited_df["awarded_credits"] = (
-                    edited_df["obe_practice_type"]
-                    .apply(self.calculateCredits)
+                    edited_df["obe_practice_type"].apply(self.calculateCredits)
                 )
 
                 if self.db.replace_pending(edited_df):
@@ -90,25 +89,27 @@ class obePractice:
                     with col1:
                         st.write("**Description**")
                         st.write(row["description"])
-
                         st.write("**Proof URL**")
                         st.write(row["proof_url"])
 
                     with col2:
-                        st.write(
-                            f"**Awarded Credits:** {row['awarded_credits']}"
-                        )
-                        st.write(
-                            f"**HoD Approval:** {row['hod_approval']}"
-                        )
-                        st.write(
-                            f"**Admin Approval:** {row['admin_approval']}"
-                        )
+                        st.write(f"**Awarded Credits:** {row['awarded_credits']}")
+                        st.write(f"**HoD Approval:** {row['hod_approval']}")
+                        st.write(f"**Admin Approval:** {row['admin_approval']}")
 
         except Exception as e:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+
+        # Reset form after successful database insertion
+        if st.session_state.pop("obe_practice_reset", False):
+            st.session_state["obe_practice_type"] = None
+            st.session_state["obe_practice_description"] = ""
+            st.session_state["obe_practice_proof_url"] = ""
+
+            st.toast("OBE Practice Entry Added Successfully!", icon="✅")
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -127,7 +128,8 @@ class obePractice:
                     "Select Practice Type",
                     ["CDP", "CAP", "CAR", "CQI", "Self-Initiative"],
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="obe_practice_type"
                 )
 
                 st.markdown(
@@ -137,8 +139,15 @@ class obePractice:
                     "4. CQI - Continuous Quality Improvement"
                 )
 
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
+                description = st.text_area(
+                    "Description",
+                    key="obe_practice_description"
+                )
+
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="obe_practice_proof_url"
+                )
 
                 proceed = True
 
@@ -178,7 +187,8 @@ class obePractice:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success("OBE Practice Added Successfully.")
+                            st.session_state["obe_practice_reset"] = True
+                            st.rerun()
                         else:
                             st.warning("OBE Practice Could Not Be Added.")
 
