@@ -144,6 +144,19 @@ class patentCopyRights:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("patent_copy_rights_reset", False):
+            st.session_state["patent_copy_rights_type"] = None
+            st.session_state["patent_copy_rights_name"] = ""
+            st.session_state["patent_copy_rights_status"] = (
+                "Patent Published"
+            )
+            st.session_state["patent_copy_rights_description"] = ""
+            st.session_state["patent_copy_rights_proof_url"] = ""
+            st.toast(
+                "Patent / Copyright Entry Added Successfully!",
+                icon="✅"
+            )
+
         tab_entry, tab_edit, tab_view = st.tabs(
             ["Entry", "Edit", "View"]
         )
@@ -162,10 +175,14 @@ class patentCopyRights:
                     "Patent Type",
                     ["Patent", "Copy Right", "Design Patent"],
                     selection_mode="single",
-                    wrap=True
+                    wrap=True,
+                    key="patent_copy_rights_type"
                 )
 
-                patent_name = st.text_input("Patent / Copyright Name")
+                patent_name = st.text_input(
+                    "Patent / Copyright Name",
+                    key="patent_copy_rights_name"
+                )
 
                 patent_status = st.radio(
                     "Patent Status",
@@ -178,13 +195,20 @@ class patentCopyRights:
                         "Design Patent Granted Without Institution Name",
                         "Revenue Generated From Patent",
                         "Revenue Generated From Design Patent"
-                    ]
+                    ],
+                    key="patent_copy_rights_status"
                 )
 
-                description = st.text_area("Description")
-                proof_url = st.text_input("Proof URL")
+                description = st.text_area(
+                    "Description",
+                    key="patent_copy_rights_description"
+                )
 
-                # Automatically validate all required fields.
+                proof_url = st.text_input(
+                    "Proof URL",
+                    key="patent_copy_rights_proof_url"
+                )
+
                 proceed = all([
                     patent_type,
                     patent_name.strip(),
@@ -232,9 +256,10 @@ class patentCopyRights:
                         }])
 
                         if self.insertDocuments(df):
-                            st.success(
-                                "Patent / Copyright Entry Added Successfully."
-                            )
+                            st.session_state[
+                                "patent_copy_rights_reset"
+                            ] = True
+                            st.rerun()
                         else:
                             st.warning(
                                 "Patent / Copyright Entry Could Not Be Added."
