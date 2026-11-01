@@ -54,9 +54,7 @@ class hackerRankEarth:
             )
 
             if df.empty:
-                st.info(
-                    "No HackerRank/HackerEarth entries are available for editing."
-                )
+                st.info("No HackerRank/HackerEarth entries are available for editing.")
                 return
 
             students = self.getStudents()
@@ -105,16 +103,11 @@ class hackerRankEarth:
 
                     rows.append({
                         "batch": row["batch"],
-                        "student_name_roll_number": row[
-                            "student_name_roll_number"
-                        ],
+                        "student_name_roll_number": row["student_name_roll_number"],
                         "platform": row["platform"],
                         "number_of_problems_solved": problems,
                         "type": row["type"],
-                        "credits": self.calculateCredits(
-                            problems,
-                            row["type"]
-                        )
+                        "credits": self.calculateCredits(problems, row["type"])
                     })
 
                 if self.db.replace_pending(pd.DataFrame(rows)):
@@ -142,14 +135,10 @@ class hackerRankEarth:
             for _, row in df.iterrows():
                 with st.container(border=True):
                     st.subheader(str(row["student_name_roll_number"]))
-
                     st.write(f"**Faculty Name:** {row['faculty_name']}")
                     st.write(f"**Batch:** {row['batch']}")
                     st.write(f"**Platform:** {row['platform']}")
-                    st.write(
-                        f"**Problems Solved:** "
-                        f"{row['number_of_problems_solved']}"
-                    )
+                    st.write(f"**Problems Solved:** {row['number_of_problems_solved']}")
                     st.write(f"**Type:** {row['type']}")
 
                     col1, col2, col3 = st.columns(3)
@@ -167,24 +156,30 @@ class hackerRankEarth:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
-        tab_entry, tab_edit, tab_view = st.tabs(
-            ["Entry", "Edit", "View"]
-        )
+        if st.session_state.pop("coding_data_reset", False):
+            st.session_state["coding_data_batch"] = None
+            st.session_state["coding_data_student"] = None
+            st.session_state["coding_data_platform"] = None
+            st.session_state["coding_data_problems"] = 0
+            st.session_state["coding_data_type"] = None
+            st.toast("Coding Data Added Successfully!", icon="✅")
+
+        tab_entry, tab_edit, tab_view = st.tabs(["Entry", "Edit", "View"])
 
         with tab_entry:
-            col1, col2 = st.columns(
-                [1, 2],
-                border=True,
-                gap="small"
-            )
+            col1, col2 = st.columns([1, 2], border=True, gap="small")
 
             with col1:
                 st.subheader("HackerRank / HackerEarth Entry")
 
-                mentees = st.session_state.get(
-                    "mentees_list",
-                    pd.DataFrame()
-                )
+                mentees = st.session_state.get("mentees_list", pd.DataFrame())
+
+                proceed = False
+                selected_batch = None
+                student = ""
+                platform = None
+                number_of_problems_solved = 0
+                coding_type = None
 
                 if mentees.empty:
                     st.warning("No mentees are assigned to this faculty.")
@@ -201,39 +196,41 @@ class hackerRankEarth:
                         "Select Batch",
                         batches,
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="coding_data_batch"
                     )
 
-                    student_options = (
-                        self.getStudents(selected_batch)
-                        if selected_batch
-                        else []
-                    )
+                    student_options = self.getStudents(selected_batch) if selected_batch else []
 
-                    student = (
-                        st.selectbox("Select Student", student_options)
-                        if student_options
-                        else ""
-                    )
+                    student = st.selectbox(
+                        "Select Student",
+                        student_options,
+                        index=None,
+                        placeholder="Select a student",
+                        key="coding_data_student"
+                    ) if student_options else ""
 
                     platform = st.pills(
                         "Platform",
                         ["HackerRank", "HackerEarth"],
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="coding_data_platform"
                     )
 
                     number_of_problems_solved = st.number_input(
                         "Number Of Problems Solved",
                         min_value=0,
-                        step=1
+                        step=1,
+                        key="coding_data_problems"
                     )
 
                     coding_type = st.pills(
                         "Type",
                         ["computing", "non computing"],
                         selection_mode="single",
-                        wrap=True
+                        wrap=True,
+                        key="coding_data_type"
                     )
 
                     proceed = True
@@ -262,17 +259,11 @@ class hackerRankEarth:
                     )
 
                     st.subheader("Coding Details")
-                    st.write(
-                        f"**Faculty Name:** "
-                        f"{st.session_state['faculty_name']}"
-                    )
+                    st.write(f"**Faculty Name:** {st.session_state['faculty_name']}")
                     st.write(f"**Student:** {student}")
                     st.write(f"**Batch:** {selected_batch}")
                     st.write(f"**Platform:** {platform}")
-                    st.write(
-                        f"**Problems Solved:** "
-                        f"{number_of_problems_solved}"
-                    )
+                    st.write(f"**Problems Solved:** {number_of_problems_solved}")
                     st.write(f"**Type:** {coding_type}")
                     st.info(f"Awarded Credits: {credits}")
 
@@ -286,14 +277,14 @@ class hackerRankEarth:
                             "batch": selected_batch,
                             "student_name_roll_number": student,
                             "platform": platform,
-                            "number_of_problems_solved":
-                                number_of_problems_solved,
+                            "number_of_problems_solved": number_of_problems_solved,
                             "type": coding_type,
                             "credits": credits
                         }])
 
                         if self.insertDocuments(df):
-                            st.success("Coding Data Added Successfully.")
+                            st.session_state["coding_data_reset"] = True
+                            st.rerun()
                         else:
                             st.warning("Coding Data Could Not Be Added.")
 
