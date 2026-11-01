@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 from activity_database import ActivityDatabase
@@ -83,6 +84,14 @@ class academicResults:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("academic_results_reset",False):
+            st.session_state["academic_results_semister"]=1
+            st.session_state["academic_results_subject_type"]=None
+            st.session_state["academic_results_sections"]=[]
+            st.session_state["academic_results_subject"]=None
+            st.session_state["academic_results_pass_percent"]=0.0
+            st.toast("Academic Result Added Successfully!",icon="✅")
+
         tab_entry,tab_edit,tab_view=st.tabs(["Entry","Edit","View"])
 
         with tab_entry:
@@ -92,20 +101,20 @@ class academicResults:
 
             with col1:
                 st.subheader("Academic Result Entry")
-                semister=st.slider("Select Semister",min_value=1,max_value=8,value=1,step=1)
+                semister=st.slider("Select Semister",min_value=1,max_value=8,value=1,step=1,key="academic_results_semister")
 
                 if subjects_df.empty:
                     st.warning("No subjects are assigned to this faculty.")
                     return
 
                 subject_types=subjects_df["subject_type"].dropna().unique().tolist()
-                subject_type=st.pills("Select Subject Type",subject_types,selection_mode="single",wrap=True)
+                subject_type=st.pills("Select Subject Type",subject_types,selection_mode="single",wrap=True,key="academic_results_subject_type")
 
                 if subject_type:
                     subject_df=subjects_df[(subjects_df["subject_semister"]==semister)&(subjects_df["subject_type"]==subject_type)]
-                    selected_sections=st.pills("Select Sections",["A","B","C","D","E","F","G"],selection_mode="multi",wrap=True)
+                    selected_sections=st.pills("Select Sections",["A","B","C","D","E","F","G"],selection_mode="multi",wrap=True,key="academic_results_sections")
                     if selected_sections:selected_sections=",".join(selected_sections)
-                    subject=st.radio("Select Subject",subject_df["subject_name"].dropna().unique().tolist())
+                    subject=st.radio("Select Subject",subject_df["subject_name"].dropna().unique().tolist(),key="academic_results_subject")
 
                     if semister and subject_type and selected_sections and subject:
                         if not selected_sections:st.warning("Please select at least one section.")
@@ -120,7 +129,7 @@ class academicResults:
             with col2:
                 if subject_type and selected_sections and subject and proceed:
                     st.subheader("Result Details")
-                    pass_percent=st.number_input("Enter Pass Percent",min_value=0.0,max_value=100.0,value=0.0,step=0.1)
+                    pass_percent=st.number_input("Enter Pass Percent",min_value=0.0,max_value=100.0,value=0.0,step=0.1,key="academic_results_pass_percent")
                     awarded_credits=self.calculateCredits(pass_percent)
                     st.info(f"Awarded Credits: {awarded_credits}")
 
@@ -129,8 +138,11 @@ class academicResults:
                         subject_code=subject_data.iloc[0]["subject_code"] if not subject_data.empty else ""
                         subject_credits=subject_data.iloc[0]["subject_credits"] if not subject_data.empty else 0
                         df=pd.DataFrame([{"subject_name":subject,"subject_code":subject_code,"subject_semister":semister,"subject_sections":selected_sections,"pass_percent":pass_percent,"subject_credits":subject_credits,"awarded_credits":awarded_credits}])
-                        if self.insertDocuments(df):st.success("Academic Result Added Successfully.")
-                        else:st.warning("Academic Result Could Not Be Added.")
+                        if self.insertDocuments(df):
+                            st.session_state["academic_results_reset"]=True
+                            st.rerun()
+                        else:
+                            st.warning("Academic Result Could Not Be Added.")
 
         with tab_edit:self.edit_document()
         with tab_view:self.viewDocuments()
