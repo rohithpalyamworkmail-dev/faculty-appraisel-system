@@ -73,6 +73,15 @@ class competetiveExaminations:
             st.error(f"View Error: {e}")
 
     def main_layout(self):
+        if st.session_state.pop("competitive_examinations_reset",False):
+            st.session_state["competitive_examinations_batch"]=None
+            st.session_state["competitive_examinations_students"]=[]
+            st.session_state["competitive_examinations_exam_name"]=""
+            st.session_state["competitive_examinations_result"]=None
+            st.session_state["competitive_examinations_description"]=""
+            st.session_state["competitive_examinations_proof_url"]=""
+            st.toast("Competitive Examination Entry Added Successfully!",icon="✅")
+
         tab_entry,tab_edit,tab_view=st.tabs(["Entry","Edit","View"])
 
         with tab_entry:
@@ -88,12 +97,12 @@ class competetiveExaminations:
                     return
 
                 batches=mentees["student_batch"].dropna().astype(str).unique().tolist()
-                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True)
-                selected_students=st.multiselect("Select Students",self.getStudents(selected_batch)) if selected_batch else []
-                exam_name=st.text_input("Exam Name")
-                result=st.pills("Result",["registered","cleared"],selection_mode="single",wrap=True)
-                description=st.text_area("Description")
-                proof_url=st.text_input("Proof URL")
+                selected_batch=st.pills("Select Batch",batches,selection_mode="single",wrap=True,key="competitive_examinations_batch")
+                selected_students=st.multiselect("Select Students",self.getStudents(selected_batch),key="competitive_examinations_students") if selected_batch else []
+                exam_name=st.text_input("Exam Name",key="competitive_examinations_exam_name")
+                result=st.pills("Result",["registered","cleared"],selection_mode="single",wrap=True,key="competitive_examinations_result")
+                description=st.text_area("Description",key="competitive_examinations_description")
+                proof_url=st.text_input("Proof URL",key="competitive_examinations_proof_url")
 
                 if not selected_batch:st.warning("Please select a Batch.")
                 elif not selected_students:st.warning("Please select at least one Student.")
@@ -116,8 +125,11 @@ class competetiveExaminations:
 
                     if st.button("Add Entry",key="competitive_examinations_add",type="secondary",width="stretch"):
                         df=pd.DataFrame([{"exam_name":exam_name,"result":result,"description":description,"proof_url":proof_url,"student_name_roll_numbers":",".join(selected_students),"batch":selected_batch,"awarded_credits":credits}])
-                        if self.insertDocuments(df):st.success("Competitive Examination Entry Added Successfully.")
-                        else:st.warning("Competitive Examination Entry Could Not Be Added.")
+                        if self.insertDocuments(df):
+                            st.session_state["competitive_examinations_reset"]=True
+                            st.rerun()
+                        else:
+                            st.warning("Competitive Examination Entry Could Not Be Added.")
 
         with tab_edit:self.edit_document()
         with tab_view:self.viewDocuments()
