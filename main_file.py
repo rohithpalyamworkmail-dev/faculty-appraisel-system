@@ -121,7 +121,7 @@ elif selected_menu == "Subjects":
 elif selected_menu == "Faculty Profile":
     profile_option = st.radio("Faculty Profile", ["Approvals / Denials", "View Profiles"], horizontal=True, key="faculty_profile_navigation")
     if profile_option == "Approvals / Denials":
-        col1, col2 = st.columns([1, 3], border=True, gap="medium")
-        settings(col1, col2).main_layout()
+        col2 = st.columns(1, border=True, gap="medium")
+        settings(None, col2).main_layout()
     else:
         viewProfiles().main_layout()
