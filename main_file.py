@@ -9,7 +9,7 @@ st.set_page_config(page_title="Academic Analytics Dashboard", layout="wide")
 
 # Initialize session state
 for key, value in {
-    "show_login_dialog": True, # Auto-open on first load
+    "show_login_dialog": True,
     "settings_login": False,
     "settings_faculty_name": "",
     "settings_faculty_id": "",
@@ -38,13 +38,11 @@ def login_dialog():
             st.warning("Please enter Department and Faculty ID.")
             return
         try:
-            # Query based on ID and Department
             result = get_one("faculty", {"department": selected_department, "faculty_id": str(faculty_id).strip()}, "faculty_name,faculty_department,faculty_id,is_hod,is_principal,is_admin")
             if not result:
                 st.error("Invalid Faculty ID for the selected department.")
                 return
             
-            # Verify if they actually hold the role they selected
             has_role = False
             if role_type == "HoD" and _truth(result.get("is_hod")): has_role = True
             elif role_type == "Admin" and _truth(result.get("is_admin")): has_role = True
@@ -54,7 +52,6 @@ def login_dialog():
                 st.error(f"This Faculty ID does not have {role_type} privileges.")
                 return
 
-            # Save to session state
             st.session_state.update({
                 "settings_login": True,
                 "settings_faculty_name": result.get("faculty_name", ""),
@@ -71,44 +68,45 @@ def login_dialog():
         except Exception as e:
             st.error(f"Login Error: {e}")
 
-# --- MAIN UI ---
+# Check login state before rendering anything else
+if not st.session_state.get("settings_login"):
+    if st.session_state.get("show_login_dialog"):
+        login_dialog()
+    st.stop()  # Stops execution so no content is displayed until logged in
+
+# --- MAIN UI (Runs only if logged in) ---
+
+# Override department variable based on role
+if st.session_state.get("settings_is_hod") == "Yes":
+    # HoD gets only their department
+    global_fields.department = [st.session_state["settings_department"]]
+else:
+    # Admin & Principal get all departments
+    pass
+
 with st.sidebar:
     selected_menu = option_menu(
         "NAVIGATION", 
         ["Students", "Faculty", "Subjects", "Faculty Profile"], 
         icons=["people-fill", "person-badge-fill", "journal-bookmark-fill", "person-bounding-box"], 
         menu_icon="menu-button-wide-fill", 
-        default_index=0
+        default_index=3 # Default to Faculty Profile since they just logged in
     )
     st.divider()
-    if st.session_state.get("settings_login"):
-        st.success(f"Logged in as {st.session_state['settings_faculty_name']}\n({st.session_state['settings_designation']})")
-        if st.button("Logout", use_container_width=True, key="sidebar_logout"):
-            st.session_state.update({
-                "settings_login": False, "show_login_dialog": True,
-                "settings_faculty_name": "", "settings_faculty_id": "",
-                "settings_department": "", "settings_designation": "",
-                "settings_is_hod": "No", "settings_is_principal": "No", "settings_is_admin": "No"
-            })
-            st.rerun()
-
-# Trigger dialog automatically if not logged in
-if st.session_state.get("show_login_dialog") and not st.session_state.get("settings_login"):
-    login_dialog()
-
-# Auto-route to Faculty Profile after successful login
-if st.session_state.get("settings_login") and "routed" not in st.session_state:
-    st.session_state["routed"] = True
-    selected_menu = "Faculty Profile"
-
-# Override department variable based on role
-if st.session_state.get("settings_login"):
-    if st.session_state.get("settings_is_hod") == "Yes":
-        # HoD gets only their department
-        global_fields.department = [st.session_state["settings_department"]]
-    else:
-        # Admin & Principal get all departments
-        pass # global_fields.department remains as imported
+    st.success(f"Logged in as {st.session_state['settings_faculty_name']}\n({st.session_state['settings_designation']})")
+    if st.button("Logout", use_container_width=True, key="sidebar_logout"):
+        st.session_state.update({
+            "settings_login": False, 
+            "show_login_dialog": True,
+            "settings_faculty_name": "", 
+            "settings_faculty_id": "",
+            "settings_department": "", 
+            "settings_designation": "",
+            "settings_is_hod": "No", 
+            "settings_is_principal": "No", 
+            "settings_is_admin": "No"
+        })
+        st.rerun()
 
 # Render Views
 if selected_menu == "Students":
@@ -123,10 +121,7 @@ elif selected_menu == "Subjects":
 elif selected_menu == "Faculty Profile":
     profile_option = st.radio("Faculty Profile", ["Approvals / Denials", "View Profiles"], horizontal=True, key="faculty_profile_navigation")
     if profile_option == "Approvals / Denials":
-        if not st.session_state.get("settings_login"):
-            st.warning("Please login to access Approvals / Denials.")
-        else:
-            col1, col2 = st.columns([1, 3], border=True, gap="medium")
-            settings(col1, col2).main_layout()
+        col1, col2 = st.columns([1, 3], border=True, gap="medium")
+        settings(col1, col2).main_layout()
     else:
         viewProfiles().main_layout()
