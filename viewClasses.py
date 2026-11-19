@@ -2,11 +2,11 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from io import BytesIO
-from global_fields import department, tables
+import global_fields
+from global_fields import tables
 from faculty_config import categories
 from streamlit_extras.metric_cards import style_metric_cards
 from database import get_rows, get_one, insert_row, update_rows, decode_bytea
-
 
 def _frame(table, department_name, columns="*", filters=None, order_by=None, descending=False):
     final = {"department": department_name}
@@ -19,30 +19,25 @@ def _frame(table, department_name, columns="*", filters=None, order_by=None, des
         st.error(f"Data Fetch Error ({table}): {e}")
         return pd.DataFrame()
 
-
 def _num(df, *columns):
     work = df.copy()
     for column in columns:
         if column in work.columns: work[column] = pd.to_numeric(work[column], errors="coerce")
     return work
 
-
 def _truth(value):
     return str(value or "").strip().lower() in {"yes", "true", "1", "y"}
-
 
 def _metric(label, value):
     st.metric(label, value); style_metric_cards()
 
-
 def _display(df):
     st.dataframe(df, use_container_width=True, hide_index=True)
-
 
 class student:
     def __init__(self, col1, col2, departments=None):
         self.col1 = col1; self.col2 = col2
-        self.departments = departments or department
+        self.departments = departments or global_fields.department
 
     def _get_data(self, db_name):
         return _num(_frame("students", db_name), "student_age")
@@ -159,11 +154,10 @@ class student:
         elif opt == "50":
             states = sorted(df["student_state"].dropna().astype(str).unique().tolist()); batches = sorted(df["stuent_batch"].dropna().astype(str).unique().tolist()); sel_state = st.selectbox("Filter State", ["All"] + states); sel_batch = st.selectbox("Filter Batch", ["All"] + batches); out = df.copy(); out = out if sel_state == "All" else out[out["student_state"].astype(str) == sel_state]; out = out if sel_batch == "All" else out[out["stuent_batch"].astype(str) == sel_batch]; _metric("Filtered Records Count", len(out)); _display(out)
 
-
 class faculty:
     def __init__(self, col1, col2, departments=None):
         self.col1 = col1; self.col2 = col2
-        self.departments = departments or department
+        self.departments = departments or global_fields.department
 
     def _get_data(self, db_name):
         return _num(_frame("faculty", db_name), "faculty_salary", "faculty_overall_experience", "faculty_experience_mtiet")
@@ -251,11 +245,10 @@ class faculty:
         elif opt == "50":
             depts = sorted(df["faculty_department"].dropna().astype(str).unique().tolist()); states = sorted(df["faculty_permanent_state"].dropna().astype(str).unique().tolist()); sel_dept = st.selectbox("Filter Department", ["All"] + depts); sel_state = st.selectbox("Filter Native State", ["All"] + states); out = df.copy(); out = out if sel_dept == "All" else out[out["faculty_department"].astype(str) == sel_dept]; out = out if sel_state == "All" else out[out["faculty_permanent_state"].astype(str) == sel_state]; _metric("Filtered Records Count", len(out)); _display(out)
 
-
 class subjects:
     def __init__(self, col1, col2, departments=None):
         self.col1 = col1; self.col2 = col2
-        self.departments = departments or department
+        self.departments = departments or global_fields.department
 
     def _get_data(self, db_name):
         return _num(_frame("subjects", db_name), "subject_semister", "subject_credits")
@@ -339,7 +332,6 @@ class subjects:
         elif opt == "48": st.info("Cross-referencing faculty metadata required. Currently displaying a standard filter output."); _display(df[faculty_lists.apply(len) > 0])
         elif opt == "49": out = df[df["alloted_faculty_ids"].fillna("").astype(str).str.contains("EXT|GST", case=False, regex=True)]; _metric("Guest Faculty Allocated Courses", len(out)); _display(out)
         elif opt == "50": out = df.sort_values(["subject_semister", "subject_code", "subject_credits"], ascending=[True, True, False]); _metric("Total Catalog Entries", len(out)); _display(out)
-
 
 class settings:
     def __init__(self, col1, col2):
@@ -601,7 +593,7 @@ class settings:
     def principal_settings(self):
         with self.col2:
             if st.session_state.get("settings_is_principal") != "Yes": st.error("Principal privileges are required."); return
-            st.subheader("Principal Settings"); selected_department = st.pills("Select Department", department, selection_mode="single", key="principal_department", wrap=True)
+            st.subheader("Principal Settings"); selected_department = st.pills("Select Department", global_fields.department, selection_mode="single", key="principal_department", wrap=True)
             if selected_department:
                 faculty_df = self.getFacultyList(selected_department)
                 if faculty_df.empty: st.info("No faculty members are available in this department."); return
@@ -706,7 +698,7 @@ class settings:
     def admin_settings(self):
         with self.col2:
             if st.session_state.get("settings_is_admin") != "Yes": st.error("Admin privileges are required."); return
-            st.subheader("Admin Settings"); selected_department = st.pills("Select Department", department, selection_mode="single", key="admin_department", wrap=True)
+            st.subheader("Admin Settings"); selected_department = st.pills("Select Department", global_fields.department, selection_mode="single", key="admin_department", wrap=True)
             if not selected_department: return
             tab_approve, tab_deny, tab_view = st.tabs(["Approve", "Deny", "View"])
             with tab_approve: st.subheader("HoD Denied Records", divider=True); self.render_admin_activity(selected_department, "hod_denied", f"admin_approve_{selected_department}")
